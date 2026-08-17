@@ -24,20 +24,6 @@ This project demonstrates an end-to-end ML pipeline, from offline data warehousi
 * **Data Visualization:** Plotly Express
 * **APIs & Environment:** Requests, Python-dotenv
 
-## 👨‍💻 Project Team
-This project was developed and submitted by B.Tech 2nd Year students at **Aligarh College of Engineering and Technology**.
-
-**Team Members:**
-* Ritik Dixit
-* Vedant Varshney
-* Saurabh Sharma
-* Vinay Pratap Singh
-* Tannu Verma
-* Roll no. 2401090100110
-
-**Project Guide:** 
-Er. Ravindra Pal Singh
-
 ## ⚙️ Local Installation & Setup
 
 1. **Clone the repository:**
