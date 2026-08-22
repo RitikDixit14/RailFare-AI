@@ -118,21 +118,6 @@ st.markdown("""
     }
     div[data-baseweb="select"] > div, input { background-color: rgba(15, 23, 42, 0.8) !important; border-color: rgba(0, 229, 255, 0.3) !important; color: white !important;}
     .stSlider > div > div > div > div { background-color: #00E5FF !important; box-shadow: 0 0 10px #00E5FF; }
-    /* Smart Booking Button Style */
-    a[data-testid="stLinkButton"] {
-        background: linear-gradient(135deg, #FF9100 0%, #FF3D00 100%) !important;
-        color: white !important;
-        font-weight: 800 !important;
-        border: none !important;
-        border-radius: 8px !important;
-        box-shadow: 0 4px 15px rgba(255, 145, 0, 0.4) !important;
-        transition: 0.3s ease-in-out !important;
-        text-align: center !important;
-    }
-    a[data-testid="stLinkButton"]:hover {
-        box-shadow: 0 4px 25px rgba(255, 145, 0, 0.7) !important;
-        transform: scale(1.02);
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -154,11 +139,9 @@ if 'compare_cart' not in st.session_state:
     st.session_state.compare_cart = []
 
 # --- 5. CLASS MULTIPLIERS & STATION DB ---
-# --- 5. CLASS MULTIPLIERS & STATION DB ---
 CLASS_MULTIPLIERS = {
-    "First AC (1A)": 4.0, "Executive Chair Car (EC)": 3.0, "Second AC (2A)": 2.5, 
-    "Third AC (3A)": 1.8, "AC Chair Car (CC)": 1.5, "Sleeper (SL)": 1.0, 
-    "Second Seating (2S)": 0.6
+    "First AC (1A)": 4.0, "Second AC (2A)": 2.5, "Third AC (3A)": 1.8, 
+    "AC Chair Car (CC)": 1.5, "Sleeper (SL)": 1.0, "Second Seating (2S)": 0.6
 }
 
 @st.cache_data
@@ -239,48 +222,11 @@ def fetch_trains(origin_code, dest_code):
         </div>
     </div>
     """, unsafe_allow_html=True)
-    # 🌍 SMART GIS DISTANCE CALCULATOR (PERMANENT FIX)
-    # Dictionary of Actual GPS Coordinates (Latitude, Longitude) for default stations
-    station_coords = {
-        "NDLS": (28.6139, 77.2090), "ALJN": (27.8814, 78.0746), "AGC": (27.1767, 77.9011),
-        "CNB": (26.4499, 80.3319), "BSB": (25.3176, 82.9739), "CSMT": (18.9398, 72.8354),
-        "HWH": (22.5726, 88.3639), "PUNE": (18.5204, 73.8567), "MAS": (13.0827, 80.2707),
-        "SBC": (12.9716, 77.5946)
-    }
-
-    # Automatically calculate real-world distance
-    if origin_code in station_coords and dest_code in station_coords:
-        lat1, lon1 = station_coords[origin_code]
-        lat2, lon2 = station_coords[dest_code]
-        
-        # Euclidean distance formula mapped to KM (approx 111 km per degree + 20% train route curve overhead)
-        dist_deg = ((lat1 - lat2)**2 + (lon1 - lon2)**2) ** 0.5
-        sim_dist = int(dist_deg * 111 * 1.2)
-        if sim_dist < 50: sim_dist = 50  # Minimum 50 KM distance safety
-    else:
-        # Fallback for completely unknown stations not in our dictionary
-        route_seed = sum(ord(c) for c in origin_code + dest_code)
-        sim_dist = (route_seed * 10) % 700 + 100 
-
-    # Calculate duration (Premium trains run at ~80 km/h, Express at ~55 km/h)
-    p_hrs, p_mins = divmod(int(sim_dist / 80 * 60), 60)
-    e_hrs, e_mins = divmod(int(sim_dist / 55 * 60), 60)
-    
-    dur_prem = f"{p_hrs:02d}h {p_mins:02d}m"
-    dur_exp = f"{e_hrs:02d}h {e_mins:02d}m"
-    
-    # Helper function to auto-calculate Arrival Time based on duration
-    def get_arr(dep_h, dep_m, travel_h, travel_m):
-        tot_m = dep_m + travel_m
-        tot_h = dep_h + travel_h + (tot_m // 60)
-        return f"{tot_h % 24:02d}:{tot_m % 60:02d}"
-
-    # Generate 100% dynamic train list based on exact kilometers
     mock_trains = [
-        {'Train_No': '12004', 'Train_Name': f'{origin_code} {dest_code} Shatabdi', 'Type': 'Premium', 'Base_Fare': int(sim_dist * 2.5), 'Dep': '06:10', 'Arr': get_arr(6, 10, p_hrs, p_mins), 'Dur': dur_prem},
-        {'Train_No': '22436', 'Train_Name': 'Vande Bharat Exp', 'Type': 'Premium', 'Base_Fare': int(sim_dist * 2.8), 'Dep': '15:00', 'Arr': get_arr(15, 0, p_hrs, p_mins), 'Dur': dur_prem},
-        {'Train_No': '12424', 'Train_Name': f'{origin_code} Rajdhani', 'Type': 'Premium', 'Base_Fare': int(sim_dist * 2.2), 'Dep': '20:10', 'Arr': get_arr(20, 10, p_hrs, p_mins), 'Dur': dur_prem},
-        {'Train_No': '12312', 'Train_Name': 'Superfast Mail', 'Type': 'Express', 'Base_Fare': int(sim_dist * 1.2), 'Dep': '10:30', 'Arr': get_arr(10, 30, e_hrs, e_mins), 'Dur': dur_exp}
+        {'Train_No': '12004', 'Train_Name': f'{origin_code} {dest_code} Shatabdi', 'Type': 'Premium', 'Base_Fare': 950, 'Dep': '06:10', 'Arr': '10:45', 'Dur': '04h 35m'},
+        {'Train_No': '22436', 'Train_Name': f'Vande Bharat Exp', 'Type': 'Premium', 'Base_Fare': 1250, 'Dep': '15:00', 'Arr': '19:10', 'Dur': '04h 10m'},
+        {'Train_No': '12424', 'Train_Name': f'{origin_code} Rajdhani', 'Type': 'Premium', 'Base_Fare': 1400, 'Dep': '20:10', 'Arr': '01:00', 'Dur': '04h 50m'},
+        {'Train_No': '12312', 'Train_Name': 'Superfast Mail', 'Type': 'Express', 'Base_Fare': 450, 'Dep': '10:30', 'Arr': '16:15', 'Dur': '05h 45m'}
     ]
     return pd.DataFrame(mock_trains)
 
@@ -311,18 +257,6 @@ with st.sidebar:
             mime="text/csv",
             use_container_width=True
         )
-        # 🆕 NEW FEATURE: PNR TRACKER WIDGET
-    st.markdown("<h2 style='color:#00E676; text-align:center;'>🔍 Live PNR Status</h2>", unsafe_allow_html=True)
-    with st.expander("Check Waitlist / PNR Status", expanded=False):
-        pnr_input = st.text_input("Enter 10-digit PNR Number", max_chars=10)
-        if st.button("Track PNR", use_container_width=True):
-            if len(pnr_input) == 10 and pnr_input.isdigit():
-                st.success("Redirecting to Live PNR Gateway...")
-                # Streamlit link button for direct redirection
-                st.link_button("View PNR Details ↗", f"https://www.confirmtkt.com/pnr-status/{pnr_input}", use_container_width=True)
-            else:
-                st.error("Please enter a valid 10-digit PNR.")
-    st.markdown("---")
 
 # --- 8. MAIN UI HERO & INPUTS ---
 st.markdown("""
@@ -379,24 +313,10 @@ with col3:
     else:
         st.info("Loading train data...")
         raw_base_fare = 0
-        train_data = None  # 🛡️ Safeguard added so it doesn't crash if empty
 
 with col_class:
-    # 🚆 DYNAMIC CLASS FILTER (PERMANENT FIX)
-    if train_data is not None:
-        current_train_name = str(train_data['Train_Name']).upper()
-        
-        if "VANDE BHARAT" in current_train_name or "SHATABDI" in current_train_name:
-            valid_classes = ["AC Chair Car (CC)", "Executive Chair Car (EC)"] 
-        elif "RAJDHANI" in current_train_name:
-            valid_classes = ["First AC (1A)", "Second AC (2A)", "Third AC (3A)"] 
-        else:
-            valid_classes = list(CLASS_MULTIPLIERS.keys()) 
-    else:
-        valid_classes = list(CLASS_MULTIPLIERS.keys())
-        
-    selected_class = st.selectbox("Travel Class", valid_classes)
-
+    selected_class = st.selectbox("Travel Class", list(CLASS_MULTIPLIERS.keys()), index=4) 
+    
 with col4:
     days_to_journey = st.number_input("Days to Travel", min_value=1, max_value=120, value=7)
     
@@ -452,26 +372,11 @@ if st.session_state.predicted and adjusted_base_fare > 0:
 
     surge_percentage = int(((current_surge_price / adjusted_base_fare) - 1.0) * 100)
     
-    # 🧠 SMART SURGE PROBABILITY ENGINE (PERMANENT FIX)
-    base_prob = seats_booked_pct
-    
-    # 1. Calculate Urgency based on Days to Journey
-    if days_to_journey > 30:
-        urgency_multiplier = 0.7  # Relaxed booking (Very low risk)
-    elif days_to_journey <= 5:
-        urgency_multiplier = 1.4  # Panic booking / Last minute (High risk)
+    if is_premium:
+        surge_probability = int(min(99, seats_booked_pct + (120 - days_to_journey) * 0.6))
     else:
-        # Gradually increases risk as days get closer
-        urgency_multiplier = 1.0 + ((30 - days_to_journey) / 100.0)
-        
-    # 2. Premium Train Penalty (Applies only if train is filling up)
-    premium_penalty = 15 if (is_premium == 1 and seats_booked_pct > 40) else 0
-    
-    # 3. Final Calculation
-    calculated_prob = int((base_prob * urgency_multiplier) + premium_penalty)
-    
-    # strictly bind between 2% (minimum risk) and 99% (max risk)
-    surge_probability = max(2, min(99, calculated_prob))
+        surge_probability = int(min(99, (seats_booked_pct * 1.2) - (days_to_journey * 2)))
+    if surge_probability < 0: surge_probability = 5
 
     col_pred, col_cart = st.columns([4, 1])
     with col_pred:
@@ -483,11 +388,7 @@ if st.session_state.predicted and adjusted_base_fare > 0:
         </div>
         """, unsafe_allow_html=True)
     with col_cart:
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # 🆕 NEW FEATURE: SMART BOOKING REDIRECT
-        st.link_button("🎫 Book on IRCTC ↗", "https://www.irctc.co.in/nget/train-search", use_container_width=True, type="secondary")
-        
+        st.markdown("<br><br>", unsafe_allow_html=True)
         if st.button("📌 Save to Cart", use_container_width=True):
             st.session_state.compare_cart.append({
                 "Train": train_data['Train_Name'], 
