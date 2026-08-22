@@ -163,33 +163,95 @@ CLASS_MULTIPLIERS = {
 
 @st.cache_data
 def load_stations():
-    # 🌍 THE MEGA IRCTC STATION DATABASE (Top 200+ Stations)
+    # 🌍 THE ULTRA-MEGA IRCTC STATION DATABASE 
+    # Contains major hubs, junctions, cantts, and prominent tier-2/3 stations across India
     return {
-        # --- NORTH INDIA ---
-        "NDLS": "New Delhi", "DLI": "Old Delhi", "NZM": "Hazrat Nizamuddin", "ANVT": "Anand Vihar Terminal", 
-        "CDG": "Chandigarh", "ASR": "Amritsar Jn", "LDH": "Ludhiana Jn", "JAT": "Jammu Tawi", "SVDK": "SMVD Katra",
-        "SRE": "Saharanpur", "UMB": "Ambala Cantt", "HW": "Haridwar", "DDN": "Dehradun",
+        # --- THE NATIONAL CAPITAL REGION & HARYANA ---
+        "NDLS": "New Delhi", "DLI": "Old Delhi", "NZM": "Hazrat Nizamuddin", "ANVT": "Anand Vihar Terminal",
+        "DEE": "Delhi Sarai Rohilla", "DEC": "Delhi Cantt", "GGN": "Gurgaon", "RE": "Rewari",
+        "ROK": "Rohtak Jn", "PNP": "Panipat Jn", "KUN": "Karnal", "UMB": "Ambala Cantt",
         
-        # --- UTTAR PRADESH & BIHAR (Major Hubs) ---
-        "ALJN": "Aligarh Jn", "AGC": "Agra Cantt", "AF": "Agra Fort", "MTJ": "Mathura Jn", 
-        "CNB": "Kanpur Central", "LKO": "Lucknow NR", "LJN": "Lucknow NE", "PRYJ": "Prayagraj Jn", 
-        "BSB": "Varanasi Jn", "DDU": "Pt. DD Upadhyaya (Mughalsarai)", "GKP": "Gorakhpur Jn", 
-        "PNBE": "Patna Jn", "MFP": "Muzaffarpur Jn", "GAYA": "Gaya Jn", "DBG": "Darbhanga Jn",
+        # --- PUNJAB, CHANDIGARH & HIMACHAL ---
+        "CDG": "Chandigarh", "ASR": "Amritsar Jn", "LDH": "Ludhiana Jn", 
+        "JUC": "Jalandhar City", "JRC": "Jalandhar Cantt", "PTK": "Pathankot", 
+        "PTKC": "Pathankot Cantt", "FZR": "Firozpur Cantt", "BTI": "Bathinda Jn",
+        "KLK": "Kalka", "SML": "Shimla",
         
-        # --- WEST INDIA ---
-        "CSMT": "Mumbai CSMT", "BCT": "Mumbai Central", "LTT": "Lokmanya Tilak T", "BDR": "Dadar", 
-        "PUNE": "Pune Jn", "ADI": "Ahmedabad Jn", "BRC": "Vadodara Jn", "ST": "Surat", 
-        "RJT": "Rajkot Jn", "NGP": "Nagpur", "BPL": "Bhopal Jn", "INDB": "Indore Jn", "GWL": "Gwalior",
+        # --- J&K ---
+        "JAT": "Jammu Tawi", "SVDK": "SMVD Katra", "UHP": "Udhampur",
         
-        # --- SOUTH INDIA ---
-        "MAS": "Chennai Central", "MS": "Chennai Egmore", "SBC": "KSR Bengaluru", "YPR": "Yesvantpur Jn", 
-        "SC": "Secunderabad Jn", "HYB": "Hyderabad Deccan", "BZA": "Vijayawada Jn", "VSKP": "Visakhapatnam", 
-        "ERS": "Ernakulam Jn", "TVC": "Thiruvananthapuram", "MAQ": "Mangaluru Central", "CBE": "Coimbatore Jn",
+        # --- UTTARAKHAND ---
+        "DDN": "Dehradun", "HW": "Haridwar", "RK": "Roorkee", "KGM": "Kathgodam",
+        "HDW": "Haldwani", "LKU": "Lal Kuan",
         
-        # --- EAST & NORTH-EAST INDIA ---
-        "HWH": "Howrah Jn", "SDAH": "Sealdah", "KOAA": "Kolkata", "BBS": "Bhubaneswar", 
-        "PURI": "Puri", "TATA": "Tatanagar Jn", "RNC": "Ranchi", "GHY": "Guwahati", "NJP": "New Jalpaiguri",
-        "KYQ": "Kamakhya", "DBRG": "Dibrugarh"
+        # --- UTTAR PRADESH (Your Home State & Major Hubs) ---
+        "ALJN": "Aligarh Jn", "AGC": "Agra Cantt", "AF": "Agra Fort", "MTJ": "Mathura Jn",
+        "CNB": "Kanpur Central", "LKO": "Lucknow NR", "LJN": "Lucknow NE", "PRYJ": "Prayagraj Jn",
+        "BSB": "Varanasi Jn", "DDU": "Pt. DD Upadhyaya (Mughalsarai)", "GKP": "Gorakhpur Jn",
+        "SRE": "Saharanpur", "MB": "Moradabad", "BE": "Bareilly", "SIT": "Sitapur",
+        "AY": "Ayodhya Dham", "AYC": "Ayodhya Cantt", "GD": "Gonda Jn", "BST": "Basti",
+        "JHS": "Virangana Lakshmibai (Jhansi)", "MZP": "Mirzapur", "GCT": "Ghazipur City",
+        "BUI": "Ballia", "MAU": "Mau Jn", "AMH": "Azamgarh", "ETW": "Etawah", "CPA": "Kanpur Anwarganj",
+        
+        # --- BIHAR & JHARKHAND ---
+        "PNBE": "Patna Jn", "PPTA": "Patliputra", "DNR": "Danapur", "MFP": "Muzaffarpur Jn",
+        "GAYA": "Gaya Jn", "DBG": "Darbhanga Jn", "SPJ": "Samastipur Jn", "KIR": "Katihar Jn",
+        "BJU": "Barauni Jn", "BGP": "Bhagalpur", "MGS": "Mughalsarai", "RNC": "Ranchi",
+        "TATA": "Tatanagar Jn", "DHN": "Dhanbad Jn", "BKSC": "Bokaro Steel City",
+        
+        # --- MADHYA PRADESH & CHHATTISGARH ---
+        "BPL": "Bhopal Jn", "RKMP": "Rani Kamlapati", "INDB": "Indore Jn", "GWL": "Gwalior",
+        "JBP": "Jabalpur", "UJN": "Ujjain Jn", "KNW": "Khandwa", "ET": "Itarsi Jn",
+        "KTE": "Katni", "STA": "Satna", "R": "Raipur Jn", "BSP": "Bilaspur Jn", "DURG": "Durg",
+        
+        # --- RAJASTHAN ---
+        "JP": "Jaipur", "JU": "Jodhpur", "AII": "Ajmer Jn", "UDZ": "Udaipur City",
+        "BKN": "Bikaner Jn", "KOTA": "Kota Jn", "ABR": "Abu Road", "BTE": "Bharatpur Jn",
+        "AWR": "Alwar",
+        
+        # --- GUJARAT ---
+        "ADI": "Ahmedabad Jn", "BRC": "Vadodara Jn", "ST": "Surat", "RJT": "Rajkot Jn",
+        "BVC": "Bhavnagar Terminus", "GIMB": "Gandhidham Bg", "VAPI": "Vapi", "ND": "Nadiad Jn",
+        
+        # --- MAHARASHTRA & GOA ---
+        "CSMT": "Mumbai CSMT", "BCT": "Mumbai Central", "LTT": "Lokmanya Tilak T", "DR": "Dadar",
+        "BVI": "Borivali", "TNA": "Thane", "KKY": "Kalyan Jn", "PUNE": "Pune Jn",
+        "NGP": "Nagpur", "NK": "Nashik Road", "BSL": "Bhusaval Jn", "AK": "Akola Jn",
+        "SGL": "Sangli", "KOP": "C.S.M.T. Kolhapur", "MAO": "Madgaon", "VSG": "Vasco-da-Gama",
+        
+        # --- KARNATAKA ---
+        "SBC": "KSR Bengaluru", "YPR": "Yesvantpur Jn", "BNC": "Bengaluru Cantt", 
+        "UBL": "SSS Hubballi", "MYS": "Mysuru Jn", "MAQ": "Mangaluru Central",
+        "MAJN": "Mangaluru Jn", "BGM": "Belagavi",
+        
+        # --- KERALA ---
+        "TVC": "Thiruvananthapuram", "ERS": "Ernakulam Jn", "ERN": "Ernakulam Town",
+        "KCVL": "Kochuveli", "CLT": "Kozhikode", "TCR": "Thrissur", "CAN": "Kannur",
+        "KTYM": "Kottayam",
+        
+        # --- TAMIL NADU ---
+        "MAS": "Chennai Central", "MS": "Chennai Egmore", "TBM": "Tambaram",
+        "CBE": "Coimbatore Jn", "MDU": "Madurai Jn", "TPJ": "Tiruchchirappalli",
+        "SA": "Salem Jn", "ED": "Erode Jn", "CAPE": "Kanniyakumari", "TEN": "Tirunelveli",
+        
+        # --- ANDHRA PRADESH & TELANGANA ---
+        "SC": "Secunderabad Jn", "HYB": "Hyderabad Deccan", "KCG": "Kacheguda",
+        "WL": "Warangal", "BZA": "Vijayawada Jn", "VSKP": "Visakhapatnam", 
+        "TPTY": "Tirupati", "RU": "Renigunta Jn", "GNT": "Guntur Jn", "RJY": "Rajahmundry",
+        
+        # --- ODISHA ---
+        "BBS": "Bhubaneswar", "PURI": "Puri", "CTC": "Cuttack", "SBP": "Sambalpur",
+        "ROU": "Rourkela",
+        
+        # --- WEST BENGAL ---
+        "HWH": "Howrah Jn", "SDAH": "Sealdah", "KOAA": "Kolkata", "SHM": "Shalimar",
+        "KGP": "Kharagpur Jn", "BWN": "Barddhaman Jn", "ASN": "Asansol Jn", 
+        "DGR": "Durgapur", "NJP": "New Jalpaiguri", "SGUJ": "Siliguri Jn",
+        
+        # --- NORTH EAST ---
+        "GHY": "Guwahati", "KYQ": "Kamakhya", "DBRG": "Dibrugarh", "NTSK": "New Tinsukia Jn",
+        "LMG": "Lumding Jn", "BPB": "Badarpur Jn", "SCL": "Silchar", "AGTL": "Agartala",
+        "NHLN": "Naharlagun"
     }
 
 MODERN_STATIONS = load_stations()
