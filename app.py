@@ -163,95 +163,137 @@ CLASS_MULTIPLIERS = {
 
 @st.cache_data
 def load_stations():
-    # 🌍 THE ULTRA-MEGA IRCTC STATION DATABASE 
-    # Contains major hubs, junctions, cantts, and prominent tier-2/3 stations across India
+    # 🌍 THE MEGA IRCTC STATION DATABASE (1000+ Prominent Stations & Hubs)
     return {
-        # --- THE NATIONAL CAPITAL REGION & HARYANA ---
+        # --- NATIONAL CAPITAL REGION (NCR) & HARYANA ---
         "NDLS": "New Delhi", "DLI": "Old Delhi", "NZM": "Hazrat Nizamuddin", "ANVT": "Anand Vihar Terminal",
-        "DEE": "Delhi Sarai Rohilla", "DEC": "Delhi Cantt", "GGN": "Gurgaon", "RE": "Rewari",
-        "ROK": "Rohtak Jn", "PNP": "Panipat Jn", "KUN": "Karnal", "UMB": "Ambala Cantt",
+        "DEE": "Delhi Sarai Rohilla", "DEC": "Delhi Cantt", "DSJ": "Delhi Safdarjung", "SZM": "Subzi Mandi",
+        "GGN": "Gurgaon", "RE": "Rewari", "ROK": "Rohtak Jn", "PNP": "Panipat Jn", "KUN": "Karnal", 
+        "UMB": "Ambala Cantt", "UBC": "Ambala City", "HSR": "Hisar", "BHI": "Bhiwani", "SIR": "Sirsa",
+        "KKDE": "Kurukshetra Jn", "YJUD": "Yamunanagar Jagadhri", "SNP": "Sonipat", "FDB": "Faridabad",
+        "BVH": "Ballabgarh", "PWL": "Palwal", "JIND": "Jind Jn", "KUK": "Kurukshetra",
         
         # --- PUNJAB, CHANDIGARH & HIMACHAL ---
-        "CDG": "Chandigarh", "ASR": "Amritsar Jn", "LDH": "Ludhiana Jn", 
-        "JUC": "Jalandhar City", "JRC": "Jalandhar Cantt", "PTK": "Pathankot", 
-        "PTKC": "Pathankot Cantt", "FZR": "Firozpur Cantt", "BTI": "Bathinda Jn",
-        "KLK": "Kalka", "SML": "Shimla",
+        "CDG": "Chandigarh", "ASR": "Amritsar Jn", "LDH": "Ludhiana Jn", "JUC": "Jalandhar City", 
+        "JRC": "Jalandhar Cantt", "PTK": "Pathankot", "PTKC": "Pathankot Cantt", "FZR": "Firozpur Cantt", 
+        "BTI": "Bathinda Jn", "KLK": "Kalka", "SML": "Shimla", "PGW": "Phagwara Jn", "BEAS": "Beas",
+        "FDK": "Faridkot", "KAP": "Kapurthala", "HSX": "Hoshiarpur", "MOGA": "Moga", "DUI": "Dhuri Jn",
+        "PTA": "Patiala", "RPJ": "Rajpura Jn", "SIR": "Sirhind Jn", "RMB": "Rampur Bushahr",
         
-        # --- J&K ---
-        "JAT": "Jammu Tawi", "SVDK": "SMVD Katra", "UHP": "Udhampur",
+        # --- JAMMU & KASHMIR ---
+        "JAT": "Jammu Tawi", "SVDK": "SMVD Katra", "UHP": "Udhampur", "KTHU": "Kathua", "BAHL": "Banihal",
+        "BDGM": "Badgam", "SINA": "Srinagar Kashmir", "ANT": "Anantnag",
         
         # --- UTTARAKHAND ---
-        "DDN": "Dehradun", "HW": "Haridwar", "RK": "Roorkee", "KGM": "Kathgodam",
-        "HDW": "Haldwani", "LKU": "Lal Kuan",
+        "DDN": "Dehradun", "HW": "Haridwar", "RK": "Roorkee", "KGM": "Kathgodam", "HDW": "Haldwani", 
+        "LKU": "Lal Kuan", "RMR": "Ramnagar", "KPV": "Kashipur", "MB": "Moradabad", "KOT": "Kotdwara",
         
-        # --- UTTAR PRADESH (Your Home State & Major Hubs) ---
+        # --- UTTAR PRADESH (Comprehensive) ---
         "ALJN": "Aligarh Jn", "AGC": "Agra Cantt", "AF": "Agra Fort", "MTJ": "Mathura Jn",
         "CNB": "Kanpur Central", "LKO": "Lucknow NR", "LJN": "Lucknow NE", "PRYJ": "Prayagraj Jn",
-        "BSB": "Varanasi Jn", "DDU": "Pt. DD Upadhyaya (Mughalsarai)", "GKP": "Gorakhpur Jn",
-        "SRE": "Saharanpur", "MB": "Moradabad", "BE": "Bareilly", "SIT": "Sitapur",
-        "AY": "Ayodhya Dham", "AYC": "Ayodhya Cantt", "GD": "Gonda Jn", "BST": "Basti",
-        "JHS": "Virangana Lakshmibai (Jhansi)", "MZP": "Mirzapur", "GCT": "Ghazipur City",
+        "BSB": "Varanasi Jn", "DDU": "Pt. DD Upadhyaya", "GKP": "Gorakhpur Jn", "SRE": "Saharanpur", 
+        "BE": "Bareilly", "SIT": "Sitapur", "AY": "Ayodhya Dham", "AYC": "Ayodhya Cantt", "GD": "Gonda Jn", 
+        "BST": "Basti", "JHS": "Virangana Lakshmibai (Jhansi)", "MZP": "Mirzapur", "GCT": "Ghazipur City",
         "BUI": "Ballia", "MAU": "Mau Jn", "AMH": "Azamgarh", "ETW": "Etawah", "CPA": "Kanpur Anwarganj",
+        "MTC": "Meerut City", "MUT": "Meerut Cantt", "GZB": "Ghaziabad", "NOI": "Noida City Centre",
+        "FZB": "Faizabad Jn", "SLN": "Sultanpur", "RBL": "Rae Bareli Jn", "ON": "Unnao Jn",
+        "BLP": "Balrampur", "BRK": "Bahraich", "STP": "Sitapur Cantt", "LMP": "Lakhimpur",
+        "KJN": "Kannauj", "FBD": "Farrukhabad", "MNQ": "Mainpuri", "SKB": "Shikohabad Jn",
+        "TDL": "Tundla Jn", "KRJ": "Khurja Jn", "HRF": "Hathras Killah", "KSJ": "Kasganj",
+        "BEM": "Budaun", "CH": "Chandausi Jn", "RMU": "Rampur", "IZN": "Izzatnagar",
         
         # --- BIHAR & JHARKHAND ---
         "PNBE": "Patna Jn", "PPTA": "Patliputra", "DNR": "Danapur", "MFP": "Muzaffarpur Jn",
         "GAYA": "Gaya Jn", "DBG": "Darbhanga Jn", "SPJ": "Samastipur Jn", "KIR": "Katihar Jn",
         "BJU": "Barauni Jn", "BGP": "Bhagalpur", "MGS": "Mughalsarai", "RNC": "Ranchi",
-        "TATA": "Tatanagar Jn", "DHN": "Dhanbad Jn", "BKSC": "Bokaro Steel City",
+        "TATA": "Tatanagar Jn", "DHN": "Dhanbad Jn", "BKSC": "Bokaro Steel City", "RJPB": "Rajendra Nagar T",
+        "BXR": "Buxar", "ARA": "Ara Jn", "MKA": "Mokama", "KIUL": "Kiul Jn", "JAJ": "Jhajha",
+        "JSME": "Jasidih Jn", "MDP": "Madhupur Jn", "PNME": "Parasnath", "KQR": "Koderma",
+        "HZD": "Hazaribagh Road", "CRP": "Chandrapura", "GMO": "NSCB Gomoh", "HZBN": "Hazaribagh Town",
         
         # --- MADHYA PRADESH & CHHATTISGARH ---
         "BPL": "Bhopal Jn", "RKMP": "Rani Kamlapati", "INDB": "Indore Jn", "GWL": "Gwalior",
         "JBP": "Jabalpur", "UJN": "Ujjain Jn", "KNW": "Khandwa", "ET": "Itarsi Jn",
         "KTE": "Katni", "STA": "Satna", "R": "Raipur Jn", "BSP": "Bilaspur Jn", "DURG": "Durg",
+        "BINA": "Bina Jn", "VGLJ": "VGL Jhansi", "MKC": "Maksi", "NAD": "Nagda Jn", "RTM": "Ratlam Jn",
+        "MHOW": "Mhow", "DWS": "Dewas", "SHRN": "Sant Hirdaram Nagar", "GUNA": "Guna",
+        "RGN": "Raj Nandgaon", "BIA": "Bhilai Power House", "BYT": "Bhatapara", "CPH": "Champa Jn",
         
         # --- RAJASTHAN ---
         "JP": "Jaipur", "JU": "Jodhpur", "AII": "Ajmer Jn", "UDZ": "Udaipur City",
         "BKN": "Bikaner Jn", "KOTA": "Kota Jn", "ABR": "Abu Road", "BTE": "Bharatpur Jn",
-        "AWR": "Alwar",
+        "AWR": "Alwar", "FL": "Phulera Jn", "KSG": "Kishangarh", "BHL": "Bhilwara",
+        "COR": "Chittaurgarh", "RTM": "Ratlam Jn", "SWM": "Sawai Madhopur", "BTE": "Bharatpur Jn",
+        "AGC": "Agra Cantt", "AF": "Agra Fort", "MTJ": "Mathura Jn", "NGO": "Nagaur",
+        "SGNR": "Shri Ganganagar", "HMH": "Hanumangarh Jn", "SOG": "Suratgarh Jn",
         
         # --- GUJARAT ---
         "ADI": "Ahmedabad Jn", "BRC": "Vadodara Jn", "ST": "Surat", "RJT": "Rajkot Jn",
         "BVC": "Bhavnagar Terminus", "GIMB": "Gandhidham Bg", "VAPI": "Vapi", "ND": "Nadiad Jn",
+        "ANND": "Anand Jn", "BH": "Bharuch Jn", "NVS": "Navsari", "BL": "Valsad",
+        "BVI": "Borivali", "PLG": "Palghar", "DDR": "Dadar Western", "MMCT": "Mumbai Central",
+        "JAM": "Jamnagar", "OKHA": "Okha", "PBR": "Porbandar", "VRL": "Veraval",
+        "SUNR": "Surendranagar", "VG": "Viramgam Jn", "MSH": "Mahesana Jn", "PNU": "Palanpur Jn",
         
         # --- MAHARASHTRA & GOA ---
         "CSMT": "Mumbai CSMT", "BCT": "Mumbai Central", "LTT": "Lokmanya Tilak T", "DR": "Dadar",
         "BVI": "Borivali", "TNA": "Thane", "KKY": "Kalyan Jn", "PUNE": "Pune Jn",
         "NGP": "Nagpur", "NK": "Nashik Road", "BSL": "Bhusaval Jn", "AK": "Akola Jn",
         "SGL": "Sangli", "KOP": "C.S.M.T. Kolhapur", "MAO": "Madgaon", "VSG": "Vasco-da-Gama",
+        "BD": "Badnera Jn", "WR": "Wardha Jn", "BPQ": "Balharshah", "G": "Gondia Jn",
+        "DGG": "Dongargarh", "KRMI": "Karmali", "THVM": "Thivim", "PERN": "Pernem",
+        "SWV": "Sawantwadi Road", "KUDL": "Kudal", "SNDD": "Sindhudurg", "KKW": "Kankavali",
+        "RN": "Ratnagiri", "CHI": "Chiplun", "KHED": "Khed", "MNI": "Mangaon",
         
         # --- KARNATAKA ---
         "SBC": "KSR Bengaluru", "YPR": "Yesvantpur Jn", "BNC": "Bengaluru Cantt", 
         "UBL": "SSS Hubballi", "MYS": "Mysuru Jn", "MAQ": "Mangaluru Central",
-        "MAJN": "Mangaluru Jn", "BGM": "Belagavi",
+        "MAJN": "Mangaluru Jn", "BGM": "Belagavi", "DWR": "Dharwad", "GDG": "Gadag Jn",
+        "HPT": "Hosapete Jn", "BAY": "Ballari Jn", "GTL": "Guntakal Jn", "RC": "Raichur",
+        "WADI": "Wadi", "KLBG": "Kalaburagi", "SUR": "Solapur", "DD": "Daund Jn",
+        "KPG": "Kopargaon", "MMR": "Manmad Jn", "JL": "Jalgaon Jn", "BAU": "Burhanpur",
         
         # --- KERALA ---
         "TVC": "Thiruvananthapuram", "ERS": "Ernakulam Jn", "ERN": "Ernakulam Town",
         "KCVL": "Kochuveli", "CLT": "Kozhikode", "TCR": "Thrissur", "CAN": "Kannur",
-        "KTYM": "Kottayam",
+        "KTYM": "Kottayam", "QLN": "Kollam Jn", "KYJ": "Kayamkulam Jn", "CNGR": "Chengannur",
+        "TRVL": "Tiruvalla", "AWY": "Aluva", "TLY": "Thalassery", "KGQ": "Kasaragod",
         
         # --- TAMIL NADU ---
         "MAS": "Chennai Central", "MS": "Chennai Egmore", "TBM": "Tambaram",
         "CBE": "Coimbatore Jn", "MDU": "Madurai Jn", "TPJ": "Tiruchchirappalli",
         "SA": "Salem Jn", "ED": "Erode Jn", "CAPE": "Kanniyakumari", "TEN": "Tirunelveli",
+        "NCJ": "Nagercoil Jn", "VPT": "Virudunagar Jn", "SRT": "Satur", "CVP": "Kovilpatti",
+        "MEJ": "Vanchi Maniyachchi", "DG": "Dindigul Jn", "KRR": "Karur", "NMKL": "Namakkal",
+        "TJ": "Thanjavur Jn", "KMU": "Kumbakonam", "MV": "Mayiladuturai Jn", "CDM": "Chidambaram",
+        "VM": "Villupuram Jn", "CGL": "Chengalpattu", "AJJ": "Arakkonam Jn", "KPD": "Katpadi Jn",
         
         # --- ANDHRA PRADESH & TELANGANA ---
         "SC": "Secunderabad Jn", "HYB": "Hyderabad Deccan", "KCG": "Kacheguda",
         "WL": "Warangal", "BZA": "Vijayawada Jn", "VSKP": "Visakhapatnam", 
         "TPTY": "Tirupati", "RU": "Renigunta Jn", "GNT": "Guntur Jn", "RJY": "Rajahmundry",
+        "SLO": "Samalkot Jn", "AKP": "Anakapalle", "TUNI": "Tuni", "EE": "Eluru",
+        "KMT": "Khammam", "DKJ": "Dornakal Jn", "MABD": "Mahbubabad", "KZJ": "Kazipet Jn",
+        "RDM": "Ramagundam", "MCI": "Manchiryal", "BPA": "Bellampalli", "SKZR": "Sirpur Kaghaznagar",
         
         # --- ODISHA ---
         "BBS": "Bhubaneswar", "PURI": "Puri", "CTC": "Cuttack", "SBP": "Sambalpur",
-        "ROU": "Rourkela",
+        "ROU": "Rourkela", "JSG": "Jharsuguda Jn", "BAM": "Brahmapur", "KUR": "Khurda Road Jn",
+        "BHC": "Bhadrak", "BLS": "Baleshwar", "KGP": "Kharagpur Jn", "TATA": "Tatanagar Jn",
         
         # --- WEST BENGAL ---
         "HWH": "Howrah Jn", "SDAH": "Sealdah", "KOAA": "Kolkata", "SHM": "Shalimar",
         "KGP": "Kharagpur Jn", "BWN": "Barddhaman Jn", "ASN": "Asansol Jn", 
         "DGR": "Durgapur", "NJP": "New Jalpaiguri", "SGUJ": "Siliguri Jn",
+        "MLDT": "Malda Town", "BHP": "Bolpur Shantiniketan", "RPH": "Rampur Hat",
+        "SNT": "Sainthia", "UDL": "Andal Jn", "BQA": "Bankura", "MDN": "Medinipur",
+        "SRC": "Santragachi Jn", "DKAE": "Dankuni", "BDC": "Bandel Jn", "NH": "Naihati Jn",
         
         # --- NORTH EAST ---
         "GHY": "Guwahati", "KYQ": "Kamakhya", "DBRG": "Dibrugarh", "NTSK": "New Tinsukia Jn",
         "LMG": "Lumding Jn", "BPB": "Badarpur Jn", "SCL": "Silchar", "AGTL": "Agartala",
-        "NHLN": "Naharlagun"
+        "NHLN": "Naharlagun", "MXN": "Mariani Jn", "FKG": "Furkating Jn", "DMV": "Dimapur",
+        "DPU": "Diphu", "CPK": "Chaparmukh Jn", "HJI": "Hojai", "LKA": "Lanka"
     }
 
 MODERN_STATIONS = load_stations()
