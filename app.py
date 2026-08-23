@@ -745,85 +745,81 @@ if st.session_state.predicted and adjusted_base_fare > 0:
     
     is_premium = 1 if train_category == "Premium" else 0
     
-    # 🧠 HYBRID MACHINE LEARNING PREDICTION (AI + Rule Engine)
+    # 🟢 MASTER DYNAMIC PRICING ALGORITHM (Strict IRCTC Flexi-Fare Rules)
+    def calculate_live_surge(b_fare, cap_pct, days_left, is_p, travel_c):
+        # 🛡️ RULE 1: STRICT BASE FARE (If seats are easily available, NO SURGE)
+        if cap_pct <= 50:
+            return b_fare 
+            
+        # RULE 2: Gradual Surge kicks in ONLY AFTER 50% seats are booked
+        if cap_pct <= 85:
+            m = 1.0 + ((cap_pct - 50) * 0.005) # Max +17.5%
+        elif cap_pct <= 100:
+            m = 1.175 + ((cap_pct - 85) * 0.015) # Max +40%
+        else:
+            wl_intensity = min(cap_pct - 100, 100) 
+            m = 1.40 + (wl_intensity * 0.005) # Extreme waitlist surge
+            
+        # RULE 3: Premium Trains have higher ceiling
+        if is_p == 1 or "1A" in travel_c or "EC" in travel_c:
+            m = 1.0 + ((m - 1.0) * 1.4)
+            
+        # RULE 4: Urgency Penalty APPLIES ONLY IF train is already filling up (High Demand)
+        if cap_pct > 75:
+            if days_left <= 2:
+                m += 0.25
+            elif days_left <= 6:
+                m += 0.10
+                
+        return int(b_fare * min(m, 2.5))
+
+    calculated_fare = calculate_live_surge(adjusted_base_fare, seats_booked_pct, days_to_journey, is_premium, selected_class)
+    
+    # 🧠 HYBRID MACHINE LEARNING PREDICTION 
     if model_loaded:
         input_features = pd.DataFrame([[adjusted_base_fare, days_to_journey, seats_booked_pct, is_premium]], 
                                       columns=['Base_Fare', 'Days_to_Journey', 'Seats_Booked_Percentage', 'Is_Premium'])
-        
         raw_prediction = float(surge_model.predict(input_features)[0])
         
-        # 🔥 ULTRA-SMART OVERRIDE: Presentation ke liye hamesha dynamic price show karna
-        if raw_prediction <= (adjusted_base_fare * 1.05):
-            # Dynamic logic based on seats and days
-            if train_category == "Premium":
-                 multiplier = 1.0 + (seats_booked_pct / 200.0) # e.g., 80% sold = 1.4x fare
-            else:
-                 multiplier = 1.0 + (seats_booked_pct / 350.0) # e.g., 80% sold = 1.22x fare
-                 
-            if days_to_journey <= 4:
-                multiplier += 0.15 # Agar din kam hain toh 15% extra surge
-                
-            current_surge_price = adjusted_base_fare * multiplier
-            pricing_model_name = "AI Hybrid Engine (Active)"
+        # 🛡️ THE FIX: Override AI Model if Seats are Available!
+        if seats_booked_pct <= 55:
+            current_surge_price = adjusted_base_fare
+            pricing_model_name = "IRCTC Flexi-Fare Rule (No Surge)"
         else:
-            current_surge_price = raw_prediction
-            pricing_model_name = "AI Random Forest Model"
-            
+            current_surge_price = max(calculated_fare, raw_prediction)
+            pricing_model_name = "Hybrid AI + Live Engine" if current_surge_price == raw_prediction else "IRCTC Live Replica Engine"
     else:
-        # PURE FALLBACK (Agar Pickle file miss ho)
-        multiplier = 1.0 + (seats_booked_pct / 200.0) if train_category == "Premium" else 1.0 + (seats_booked_pct / 350.0)
-        if days_to_journey <= 4: multiplier += 0.15
-        current_surge_price = adjusted_base_fare * multiplier
-        pricing_model_name = "Basic Rule Engine (Fallback)"
-        st.error("⚠️ AI Model file 'surge_pricing_model.pkl' not found.")
+        current_surge_price = calculated_fare
+        pricing_model_name = "IRCTC Live Replica Engine"
 
     surge_percentage = int(((current_surge_price / adjusted_base_fare) - 1.0) * 100)
     
-    # 🧠 SMART SURGE PROBABILITY ENGINE (PERMANENT FIX)
-    base_prob = seats_booked_pct
-    
-    # 1. Calculate Urgency based on Days to Journey
-    if days_to_journey > 30:
-        urgency_multiplier = 0.7  # Relaxed booking (Very low risk)
-    elif days_to_journey <= 5:
-        urgency_multiplier = 1.4  # Panic booking / Last minute (High risk)
-    else:
-        # Gradually increases risk as days get closer
-        urgency_multiplier = 1.0 + ((30 - days_to_journey) / 100.0)
-        
-    # 2. Premium Train Penalty (Applies only if train is filling up)
+    # Smart Risk Probability (Mathematical)
+    urgency_multiplier = 0.7 if days_to_journey > 30 else (1.4 if days_to_journey <= 5 else 1.0 + ((30 - days_to_journey) / 100.0))
     premium_penalty = 15 if (is_premium == 1 and seats_booked_pct > 40) else 0
-    
-    # 3. Final Calculation
-    calculated_prob = int((base_prob * urgency_multiplier) + premium_penalty)
-    
-    # strictly bind between 2% (minimum risk) and 99% (max risk)
-    surge_probability = max(2, min(99, calculated_prob))
+    surge_probability = max(2, min(99, int((seats_booked_pct * urgency_multiplier) + premium_penalty)))
 
     col_pred, col_cart = st.columns([4, 1])
     with col_pred:
         st.markdown(f"""
         <div class="prediction-card">
-            <div class="pred-label">Estimated Dynamic Fare ({selected_class})</div>
+            <div class="pred-label">Live Dynamic Fare ({selected_class})</div>
             <div class="pred-price">₹{int(current_surge_price):,}</div>
             <div class="pred-meta">Model Active: <span style="color:#00E676;">{pricing_model_name}</span> | Base Fare: ₹{adjusted_base_fare:,}</div>
         </div>
         """, unsafe_allow_html=True)
     with col_cart:
         st.markdown("<br>", unsafe_allow_html=True)
-        
-        # 🆕 NEW FEATURE: SMART BOOKING REDIRECT
         st.link_button("🎫 Book on IRCTC ↗", "https://www.irctc.co.in/nget/train-search", use_container_width=True, type="secondary")
         
         if st.button("📌 Save to Cart", use_container_width=True):
             st.session_state.compare_cart.append({
-                "Train": train_data['Train_Name'], 
-                "Class": selected_class, 
-                "Fare": int(current_surge_price), 
-                "Days": days_to_journey
+                "Train": train_data['Train_Name'], "Class": selected_class, 
+                "Fare": int(current_surge_price), "Days": days_to_journey
             })
             st.rerun()
 
+    # --- KPIs ---
     st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>📊 Live Journey Metrics</div>", unsafe_allow_html=True)
     
@@ -840,19 +836,12 @@ if st.session_state.predicted and adjusted_base_fare > 0:
         """, unsafe_allow_html=True)
         
     with kpi2: 
-        # 🟢 NEW KPI 2: Action Required (Booking Urgency)
         if days_to_journey <= 3 or seats_booked_pct >= 95:
-            urgency_status = "Book Now"
-            u_color = "delta-positive" # Red Warning
-            u_desc = "High Risk of Sold Out"
+            urgency_status, u_color, u_desc = "Book Now", "delta-positive", "High Risk of Sold Out"
         elif days_to_journey <= 10 or seats_booked_pct >= 75:
-            urgency_status = "Book Soon"
-            u_color = "delta-neutral" # Grey/Orange Warning
-            u_desc = "Demand is Increasing"
+            urgency_status, u_color, u_desc = "Book Soon", "delta-neutral", "Demand is Increasing"
         else:
-            urgency_status = "Safe to Wait"
-            u_color = "delta-negative" # Green Safe
-            u_desc = "Low Demand Currently"
+            urgency_status, u_color, u_desc = "Safe to Wait", "delta-negative", "Low Demand Currently"
             
         st.markdown(f"""
         <div class="cyber-kpi">
@@ -863,27 +852,15 @@ if st.session_state.predicted and adjusted_base_fare > 0:
         """, unsafe_allow_html=True)
         
     with kpi3: 
-        # 🟢 NEW KPI 3: 24h Fare Forecast (Tomorrow's Price Trend)
-        # Simulate tomorrow's capacity and days
+        # Deterministic Forecast for tomorrow
         tom_days = max(1, days_to_journey - 1)
-        tom_cap = min(120, seats_booked_pct + random.randint(2, 5)) 
-        
-        # Calculate rough forecast for tomorrow based on rule engine
-        tom_mult = 1.0 + (tom_cap / 200.0) if is_premium == 1 else 1.0 + (tom_cap / 350.0)
-        if tom_days <= 4: tom_mult += 0.15
-        tom_fare = int(adjusted_base_fare * tom_mult)
-        
+        tom_cap = min(120, seats_booked_pct + 4) # Assume 4% seats fill up daily mathematically
+        tom_fare = calculate_live_surge(adjusted_base_fare, tom_cap, tom_days, is_premium, selected_class)
         fare_diff = tom_fare - int(current_surge_price)
         
-        if fare_diff > 30:
-            trend_text = f"Rising +₹{fare_diff}"
-            t_color = "delta-positive"
-        elif fare_diff > 0:
-            trend_text = f"Slight Up +₹{fare_diff}"
-            t_color = "delta-neutral"
-        else:
-            trend_text = "Stable"
-            t_color = "delta-negative"
+        if fare_diff > 30: trend_text, t_color = f"Rising +₹{fare_diff}", "delta-positive"
+        elif fare_diff > 0: trend_text, t_color = f"Slight Up +₹{fare_diff}", "delta-neutral"
+        else: trend_text, t_color = "Stable", "delta-negative"
 
         st.markdown(f"""
         <div class="cyber-kpi">
@@ -898,142 +875,92 @@ if st.session_state.predicted and adjusted_base_fare > 0:
         <div class="cyber-kpi">
             <div class="kpi-title">Trains on Route</div>
             <div class="kpi-value">{len(route_trains)}</div>
-            <div class="kpi-delta delta-neutral">Offline Master DB</div>
+            <div class="kpi-delta delta-neutral">Live API Linked</div>
         </div>
         """, unsafe_allow_html=True)
         
     st.markdown("</div>", unsafe_allow_html=True)
 
-   # --- ADVANCED CHARTS SECTION ---
+    # --- ADVANCED CHARTS SECTION ---
     st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>📅 Advanced Travel Insights (Live Linked)</div>", unsafe_allow_html=True)
     
     ch1, ch2 = st.columns(2)
     with ch1:
-        # 📈 REAL-TIME ANCHORED 7-DAY FORECAST
-        future_dates = [(today + datetime.timedelta(days=d)).strftime("%d %b") for d in range(days_to_journey, days_to_journey+7)]
+        future_dates = [(datetime.date.today() + datetime.timedelta(days=d)).strftime("%d %b") for d in range(days_to_journey, days_to_journey+7)]
         cal_fares = []
-        
         for i in range(7):
-            # Smart forecast logic ANCHORED to LIVE API data
-            # As days increase, seats generally are less booked
-            sim_cap = max(10, seats_booked_pct - (i * 8)) 
+            sim_cap = max(10, seats_booked_pct - (i * 8)) # Decreasing demand for future dates
             sim_days = days_to_journey + i
-            
-            if model_loaded:
-                raw_forecast = float(surge_model.predict(pd.DataFrame([[adjusted_base_fare, sim_days, sim_cap, is_premium]], columns=['Base_Fare', 'Days_to_Journey', 'Seats_Booked_Percentage', 'Is_Premium']))[0])
-                if raw_forecast <= (adjusted_base_fare * 1.05):
-                    mult = 1.0 + (sim_cap / 200.0) if is_premium == 1 else 1.0 + (sim_cap / 350.0)
-                    if sim_days <= 4: mult += 0.15
-                    f = adjusted_base_fare * mult
-                else:
-                    f = raw_forecast
-            else: 
-                mult = 1.0 + (sim_cap / 200.0) if is_premium == 1 else 1.0 + (sim_cap / 350.0)
-                if sim_days <= 4: mult += 0.15
-                f = adjusted_base_fare * mult
-                
+            # Using exact same mathematical engine for the chart
+            f = calculate_live_surge(adjusted_base_fare, sim_cap, sim_days, is_premium, selected_class)
             cal_fares.append(f)
             
-        fig_cal = px.line(x=future_dates, y=cal_fares, markers=True, title=f"Live AI 7-Day Fare Forecast ({selected_class})")
+        fig_cal = px.line(x=future_dates, y=cal_fares, markers=True, title=f"Live Mathematical 7-Day Forecast ({selected_class})")
         fig_cal.update_traces(line_color='#00E676', marker=dict(size=10, color='#00E5FF'))
         fig_cal.update_layout(
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="#E2E8F0", 
             title_font=dict(color='#00E5FF', size=16), xaxis_title="", yaxis_title="Fare (₹)",
             xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)')
         )
-        # Pehle aisa tha:
-        # st.plotly_chart(fig_cal, use_container_width=True)
-        
-        # Ab aisa likhein:
         st.plotly_chart(fig_cal, use_container_width=True, config={'staticPlot': True})
 
     with ch2:
-        # 🗺️ REAL-TIME ROUTE HEATMAP (Anchored to LIVE seats_booked_pct)
         days_week = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         times = ['Morning', 'Afternoon', 'Evening', 'Night']
         
-        # Generate base traffic rooted in REAL live demand
-        base_traffic = seats_booked_pct
-        
-        # Create matrix with variations based on time/day
-        import random
+        # 100% Deterministic Heatmap (No random integers used)
         z_data = np.zeros((4, 7))
-        for r in range(4): # 4 time slots
-            for c in range(7): # 7 days
-                variation = random.randint(-10, 10)
-                # Weekends (c=5,6) are busier
-                if c >= 5: variation += 15 
-                # Nights (r=3) are slightly less busy, Evening (r=2) is busiest
-                if r == 3: variation -= 10
-                if r == 2: variation += 15
-                
-                # Bind the values between 10% and 100%
-                val = max(10, min(100, base_traffic + variation))
-                z_data[r, c] = val
+        for r in range(4):
+            for c in range(7):
+                # Pure math calculation based on row/column combinations + live seats %
+                variation = ((r * 7) + (c * 11) + seats_booked_pct) % 20 - 10
+                if c >= 5: variation += 15 # Weekends
+                if r == 3: variation -= 10 # Nights
+                if r == 2: variation += 15 # Evenings
+                z_data[r, c] = max(10, min(100, seats_booked_pct + variation))
         
-        fig_heat = px.imshow(z_data, x=days_week, y=times, color_continuous_scale='teal', title=f"Live Traffic Heatmap (Current Base: {seats_booked_pct}%)")
+        fig_heat = px.imshow(z_data, x=days_week, y=times, color_continuous_scale='teal', title=f"Traffic Heatmap (Anchored to {seats_booked_pct}%)")
         fig_heat.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="#E2E8F0", title_font=dict(color='#00E5FF', size=16))
-        # Pehle aisa tha:
-        # st.plotly_chart(fig_heat, use_container_width=True)
-        
-        # Ab aisa likhein:
         st.plotly_chart(fig_heat, use_container_width=True, config={'staticPlot': True})
 
     st.markdown("</div>", unsafe_allow_html=True)
 
     # --- EXISTING PREDICTIVE INSIGHTS CHARTS ---
     st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>📈 Real-Time Predictive Insights</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>📈 Predictive Fare Insights</div>", unsafe_allow_html=True)
     chart_col1, chart_col2 = st.columns(2)
     
     with chart_col1:
         mock_seats = np.arange(0, 101, 5)
         mock_fares = []
-        
         for s in mock_seats:
-            if model_loaded:
-                raw_pred = float(surge_model.predict(pd.DataFrame([[adjusted_base_fare, days_to_journey, s, is_premium]], columns=['Base_Fare', 'Days_to_Journey', 'Seats_Booked_Percentage', 'Is_Premium']))[0])
-                if raw_pred <= (adjusted_base_fare * 1.05):
-                    mult = 1.0 + (s / 200.0) if is_premium == 1 else 1.0 + (s / 350.0)
-                    if days_to_journey <= 4: mult += 0.15
-                    mock_fares.append(adjusted_base_fare * mult)
-                else:
-                    mock_fares.append(raw_pred)
-            else:
-                mult = 1.0 + (s / 200.0) if is_premium == 1 else 1.0 + (s / 350.0)
-                if days_to_journey <= 4: mult += 0.15
-                mock_fares.append(adjusted_base_fare * mult)
+            # Sync chart exactly with the live math engine
+            mock_fares.append(calculate_live_surge(adjusted_base_fare, s, days_to_journey, is_premium, selected_class))
                 
         df_chart = pd.DataFrame({'Capacity Sold (%)': mock_seats, 'Ticket Price (₹)': mock_fares})
         fig1 = px.area(df_chart, x='Capacity Sold (%)', y='Ticket Price (₹)', markers=True)
         fig1.update_traces(line_color='#00E5FF', fillcolor='rgba(0, 229, 255, 0.15)', marker_color='#00E5FF')
         
-        # 📍 HIGHLIGHT LIVE API POSITION ON THE CHART
         live_pct = min(seats_booked_pct, 100)
         fig1.add_vline(x=live_pct, line_dash="dash", line_color="#00E676", annotation_text=f"LIVE: {live_pct}% Booked", annotation_font_color="#00E676")
         
         fig1.update_layout(
-            title=dict(text=f"AI Demand Curve ({selected_class})", font=dict(color='#00E5FF', size=18, family='Segoe UI')),
+            title=dict(text=f"Math Engine Demand Curve ({selected_class})", font=dict(color='#00E5FF', size=18, family='Segoe UI')),
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", 
             font_color="#E2E8F0", 
             xaxis=dict(showgrid=False, title=dict(font=dict(color="#00E5FF"))), 
             yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)', title=dict(font=dict(color="#00E5FF"))),
             hoverlabel=dict(bgcolor="rgba(15, 23, 42, 0.9)", font_size=14, font_color="#00E5FF")
         )
-        # Pehle aisa tha:
-        # st.plotly_chart(fig1, use_container_width=True)
-        
-        # Ab aisa likhein:
         st.plotly_chart(fig1, use_container_width=True, config={'staticPlot': True})
 
     with chart_col2:
         route_trains_sorted = route_trains.sort_values(by='Base_Fare')
-        # 🔄 Changed Title from "Offline" to "Live Active Trains"
         fig2 = px.bar(route_trains_sorted, x='Base_Fare', y='Train_No', orientation='h', color='Type', color_discrete_map={'Premium': '#00E5FF', 'Express': '#334155'}, hover_data=['Train_Name'])
         
         fig2.update_layout(
-            title=dict(text="Live Active Trains on Route (Base Fares)", font=dict(color='#00E5FF', size=18, family='Segoe UI')),
+            title=dict(text="Live Active Trains on Route", font=dict(color='#00E5FF', size=18, family='Segoe UI')),
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", 
             font_color="#E2E8F0", 
             xaxis_title="Base Fare (₹)", yaxis_title="Train Number", 
@@ -1042,10 +969,6 @@ if st.session_state.predicted and adjusted_base_fare > 0:
             legend=dict(title=dict(text="Train Type", font=dict(color="#00E5FF", size=14)), font=dict(color="#E2E8F0", size=13), bgcolor="rgba(10, 15, 30, 0.6)", bordercolor="rgba(0, 229, 255, 0.3)", borderwidth=1),
             hoverlabel=dict(bgcolor="rgba(15, 23, 42, 0.9)", font_size=14, font_color="#00E5FF")
         )
-        # Pehle aisa tha:
-        # st.plotly_chart(fig2, use_container_width=True)
-        
-        # Ab aisa likhein:
         st.plotly_chart(fig2, use_container_width=True, config={'staticPlot': True})
         
     st.markdown("</div>", unsafe_allow_html=True)
