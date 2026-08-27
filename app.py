@@ -10,8 +10,6 @@ import os
 from dotenv import load_dotenv
 import requests
 from bs4 import BeautifulSoup
-import requests
-import google.generativeai as genai
 
 # 🔐 ENVIRONMENT VARIABLES LOAD KARNA
 from dotenv import load_dotenv, find_dotenv
