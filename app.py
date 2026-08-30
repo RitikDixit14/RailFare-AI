@@ -10,6 +10,76 @@ import os
 from dotenv import load_dotenv
 import requests
 from bs4 import BeautifulSoup
+import requests
+import datetime  # 🛠️ FIXED THE IMPORT CLASH
+
+# 🚆 THE RAILYATRI ENGINE (Using Your Custom Token)
+def fetch_live_seat_status(train_no, travel_class, source, dest, date_of_journey):
+    
+    # Date Format Fix (Safe standard datetime use)
+    try:
+        d_obj = datetime.datetime.strptime(str(date_of_journey), "%d-%m-%Y")
+        ry_date = d_obj.strftime("%Y-%m-%d")
+    except:
+        ry_date = str(date_of_journey)
+
+    # Aapki Golden API URL
+    url = f"https://sa.railyatri.in/api/seat/enquiry/{train_no}/{ry_date}/{source}/{dest}/{travel_class}/GN.json"
+    
+    # 🔑 Aapka Personal Token
+    params = {
+        "user_id": "45e29781440389029582b0a374ffeb65",
+        "authentication_token": "67a641529d57819e92a2d13a4d0742fb",
+        "device_type_id": "6"
+    }
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0",
+        "Accept": "application/json",
+        "Origin": "https://www.railyatri.in",
+        "Referer": "https://www.railyatri.in/"
+    }
+    
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        return {"error": f"Blocked by RailYatri: {response.status_code}"}
+    except Exception as e:
+        return {"error": str(e)}
+import requests
+
+def fetch_railyatri_live_status(train_no, date, source, dest, travel_class):
+    # Date format must be YYYY-M-D (e.g., 2026-9-14)
+    # Class like 1A, 2A, 3A, SL
+    url = f"https://sa.railyatri.in/api/seat/enquiry/{train_no}/{date}/{source}/{dest}/{travel_class}/GN.json"
+    
+    # 🔑 THE SECRET SAUCE: Tumhara Personal Exported Token
+    params = {
+        "user_id": "45e29781440389029582b0a374ffeb65",
+        "authentication_token": "67a641529d57819e92a2d13a4d0742fb",
+        "device_type_id": "6"
+    }
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/152.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Origin": "https://www.railyatri.in",
+        "Referer": "https://www.railyatri.in/"
+    }
+    
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return data
+        else:
+            return {"error": f"Failed: {response.status_code}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+# Test run
+# print(fetch_railyatri_live_status("20434", "2026-9-14", "DLI", "ALJN", "2A"))
 
 # 🔐 ENVIRONMENT VARIABLES LOAD KARNA
 from dotenv import load_dotenv, find_dotenv
@@ -350,8 +420,14 @@ def load_stations():
 
 MODERN_STATIONS = load_stations()
 
-# --- 6. OFFLINE DATA WAREHOUSE FETCHING (SUPER FAST, NO API LIMITS) ---
-# --- 6. INTELLIGENT DATA FETCHING (LIVE -> CSV -> SMART SIMULATION) ---
+import pandas as pd
+import os
+import datetime
+import requests
+import hashlib
+import streamlit as st
+
+# --- 6. INTELLIGENT DATA FETCHING (STRICT EXACT-STATION FILTER) ---
 @st.cache_data(ttl=3600)
 def fetch_trains(origin_code, dest_code):
     API_KEY = os.getenv("RAPIDAPI_KEY")
@@ -362,14 +438,100 @@ def fetch_trains(origin_code, dest_code):
     origin_code = str(origin_code).strip().upper()
     dest_code = str(dest_code).strip().upper()
     
-    tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-    url = "https://irctc1.p.rapidapi.com/api/v3/trainBetweenStations"
-    headers = {"Content-Type": "application/json", "x-rapidapi-host": "irctc1.p.rapidapi.com", "x-rapidapi-key": API_KEY}
-    
-    # STEP 1: LIVE API TRY KARENGE
+    tomorrow_rapid = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    tomorrow_ct = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%d-%m-%Y")
+
+    # ====================================================================
+    # STEP 1: HACKER WAY: CONFIRMTKT LIVE API
+    # ====================================================================
+    try:
+        hacker_url = f"https://cttrainsapi.confirmtkt.com/api/v1/trains/search?sourceStationCode={origin_code}&destinationStationCode={dest_code}&addAvailabilityCache=true&excludeMultiTicketAlternates=true&excludeBoostAlternates=true&sortBy=DEFAULT&dateOfJourney={tomorrow_ct}&enableNearby=false&enableTG=true&showPredictionGlobal=true"
+        
+        spoof_headers = {
+            "Accept": "*/*",
+            "ApiKey": "ct-web!2$",
+            "ClientId": "ct-web",
+            "Connection": "keep-alive",
+            "Origin": "https://www.confirmtkt.com",
+            "Referer": "https://www.confirmtkt.com/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0"
+        }
+        
+        response = requests.get(hacker_url, headers=spoof_headers, timeout=8)
+        
+        if response.status_code == 200:
+            live_data = response.json()
+            api_data_block = live_data.get('data', {})
+            trains_array = api_data_block.get('trainList', [])
+            
+            parsed_trains = []
+            for t in trains_array:
+                # 🚨 THE ULTIMATE STRICT FILTER (City Cluster Bypass)
+                t_origin = str(t.get('fromStnCode', t.get('sourceStationCode', origin_code))).strip().upper()
+                t_dest = str(t.get('toStnCode', t.get('destinationStationCode', dest_code))).strip().upper()
+                
+                # Agar station 100% exact match nahi hota, toh train skip kar do!
+                if t_origin != origin_code or t_dest != dest_code:
+                    continue  
+
+                train_no = str(t.get('trainNumber', t.get('trainNo', '0000')))
+                train_name = str(t.get('trainName', 'EXPRESS'))
+                dep_time = str(t.get('departureTime', '10:00'))
+                arr_time = str(t.get('arrivalTime', '15:00'))
+                duration = str(t.get('duration', '05:00'))
+                
+                avail_dict = {}
+                fares_dict = {}
+                fare = 0
+                
+                try:
+                    raw_cache = t.get('availabilityCache', {})
+                    for c_code, c_data in raw_cache.items():
+                        if isinstance(c_data, dict):
+                            avail_dict[c_code] = str(c_data.get('Availability', ''))
+                            real_f = c_data.get('Fare') or c_data.get('fare') or c_data.get('totalFare')
+                            if real_f:
+                                fares_dict[c_code] = int(real_f)
+                                if fare == 0: fare = int(real_f)
+                                
+                    if not avail_dict:
+                        class_list = t.get('avlClassesSorted', [])
+                        for cls in class_list:
+                            base_cls = cls.split('_')[0] if '_' in cls else cls
+                            avail_dict[base_cls] = f"AVAILABLE-0058"
+                except Exception:
+                    pass
+                
+                if fare == 0:
+                    fares_list = t.get('ticketFares', [])
+                    if fares_list and isinstance(fares_list, list) and len(fares_list) > 0:
+                        fare = int(fares_list[0].get('fare', 0))
+                        
+                t_type = "Premium" if any(k in train_name.upper() for k in ["SHATABDI", "VANDE", "RAJDHANI"]) else "Express"
+                
+                if fare == 0:
+                    fare = int((300 * 2.5) + 150) if t_type == 'Premium' else int((300 * 1.2) + 50)
+                
+                parsed_trains.append([train_no, train_name, dep_time, arr_time, duration, t_type, fare, avail_dict, fares_dict])
+            
+            if len(parsed_trains) > 0:
+                route_trains = pd.DataFrame(parsed_trains, columns=['Train_No', 'Train_Name', 'Dep', 'Arr', 'Dur', 'Type', 'Base_Fare', 'Avail_Dict', 'Fares_Dict'])
+                route_trains = route_trains.drop_duplicates(subset=['Train_No'])
+                st.success("🟢 Connected to Live IRCTC Server (Strict Exact Stops Only)")
+                return route_trains
+    except Exception:
+        pass  
+
+    # ====================================================================
+    # STEP 2: RAPID-API (SECONDARY ENGINE)
+    # ====================================================================
     if API_KEY:
         try:
-            response = request.get(url, headers=headers, params={"fromStationCode": origin_code, "toStationCode": dest_code, "dateOfJourney": tomorrow}, timeout=6)
+            url = "https://irctc1.p.rapidapi.com/api/v3/trainBetweenStations"
+            headers = {"Content-Type": "application/json", "x-rapidapi-host": "irctc1.p.rapidapi.com", "x-rapidapi-key": API_KEY}
+            
+            response = requests.get(url, headers=headers, params={"fromStationCode": origin_code, "toStationCode": dest_code, "dateOfJourney": tomorrow_rapid}, timeout=6)
+            
             if response.status_code == 200:
                 api_data = response.json()
                 train_list = api_data.get('data', []) if isinstance(api_data.get('data'), list) else (api_data.get('data', {}).get('trains', []) if isinstance(api_data.get('data'), dict) else api_data.get('trains', []))
@@ -378,6 +540,13 @@ def fetch_trains(origin_code, dest_code):
                     parsed = []
                     for t in train_list:
                         if not isinstance(t, dict): continue
+                        
+                        # 🚨 THE ULTIMATE STRICT FILTER (RapidAPI Bypass)
+                        t_origin = str(t.get('fromStnCode', origin_code)).strip().upper()
+                        t_dest = str(t.get('toStnCode', dest_code)).strip().upper()
+                        if t_origin != origin_code or t_dest != dest_code:
+                            continue
+
                         t_no = str(t.get('trainNumber', t.get('trainNo', '0000')))
                         t_name = str(t.get('trainName', 'Unknown'))
                         is_prem = 'Premium' if any(k in t_name.upper() for k in ['VANDE', 'SHATABDI', 'RAJDHANI', 'TEJAS']) else 'Express'
@@ -385,134 +554,76 @@ def fetch_trains(origin_code, dest_code):
                         parsed.append({
                             'Train_No': t_no, 'Train_Name': t_name, 'Type': is_prem,
                             'Base_Fare': int((dist * 2.5) + 150) if is_prem == 'Premium' else int((dist * 1.2) + 50), 
-                            'Dep': str(t.get('departureTime', '--:--')), 'Arr': str(t.get('arrivalTime', '--:--')), 'Dur': str(t.get('duration', '--h --m'))
+                            'Dep': str(t.get('departureTime', '--:--')), 'Arr': str(t.get('arrivalTime', '--:--')), 'Dur': str(t.get('duration', '--h --m')),
+                            'Avail_Dict': {}, 'Fares_Dict': {}
                         })
-                    return pd.DataFrame(parsed).drop_duplicates('Train_No')
+                    if len(parsed) > 0:
+                        st.success("🟡 Connected via RapidAPI (Strict Exact Stops Only)")
+                        return pd.DataFrame(parsed).drop_duplicates('Train_No')
         except Exception:
-            pass # API fail hui, aage badho CSV ki taraf
-            
-    # STEP 2: CSV DATABASE MEIN DHOONDHENGE
+            pass  
+
+    # ... BAAKI KA CODE (CSV and Simulation) WAHI RAHEGA ...  
+
+    # ====================================================================
+    # STEP 3: CSV DATABASE (TERTIARY ENGINE)
+    # ====================================================================
     if os.path.exists(master_file):
         try:
             df = pd.read_csv(master_file)
             df['Origin'] = df['Origin'].astype(str).str.strip().str.upper()
             df['Dest'] = df['Dest'].astype(str).str.strip().str.upper()
+            
+            # CSV me already Origin aur Dest exact match ho rahe hain
             route_data = df[(df['Origin'] == origin_code) & (df['Dest'] == dest_code)]
             
             if not route_data.empty:
                 st.info("📊 Serving Historical Data from Master Database")
                 route_data['Train_No'] = route_data['Train_No'].astype(str)
                 display_df = route_data.drop_duplicates(subset=['Train_No']).copy()
-                return display_df[['Train_No', 'Train_Name', 'Type', 'Base_Fare', 'Dep', 'Arr', 'Dur']].sort_values('Base_Fare')
+                
+                if 'Avail_Dict' not in display_df.columns: display_df['Avail_Dict'] = "{}"
+                if 'Fares_Dict' not in display_df.columns: display_df['Fares_Dict'] = "{}"
+                
+                return display_df[['Train_No', 'Train_Name', 'Type', 'Base_Fare', 'Dep', 'Arr', 'Dur', 'Avail_Dict', 'Fares_Dict']].sort_values('Base_Fare')
         except Exception:
             pass
-        # 🟢 HACKER WAY: CONFIRMTKT LIVE API BYPASS (WITH REAL AVAILABILITY)
-        try:
-            import requests
-            
-            api_date = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%d-%m-%Y")
-            
-            hacker_url = f"https://cttrainsapi.confirmtkt.com/api/v1/trains/search?sourceStationCode={origin_code}&destinationStationCode={dest_code}&addAvailabilityCache=true&excludeMultiTicketAlternates=false&excludeBoostAlternates=false&sortBy=DEFAULT&dateOfJourney={api_date}&enableNearby=true&enableTG=true&showPredictionGlobal=true"
-            
-            spoof_headers = {
-                "Accept": "*/*",
-                "ApiKey": "ct-web!2$",
-                "ClientId": "ct-web",
-                "Connection": "keep-alive",
-                "Origin": "https://www.confirmtkt.com",
-                "Referer": "https://www.confirmtkt.com/",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            }
-            
-            response = requests.get(hacker_url, headers=spoof_headers, timeout=8)
-            
-            if response.status_code == 200:
-                live_data = response.json()
-                api_data_block = live_data.get('data', {})
-                
-                trains_array = api_data_block.get('trainList', [])
-                if not trains_array:
-                    trains_array = api_data_block.get('nearbyTrains', [])
-                
-                parsed_trains = []
-                for t in trains_array:
-                    train_no = str(t.get('trainNumber', t.get('trainNo', '0000')))
-                    train_name = str(t.get('trainName', 'EXPRESS'))
-                    dep_time = str(t.get('departureTime', '10:00'))
-                    arr_time = str(t.get('arrivalTime', '15:00'))
-                    duration = str(t.get('duration', '05:00'))
-                    
-                    # 🚀 NEW: DEEP JSON EXTRACTION FOR REAL AVAILABILITY & FARES
-                    avail_dict = {}
-                    fares_dict = {}
-                    fare = 0
-                    try:
-                        raw_cache = t.get('availabilityCache', {})
-                        for c_code, c_data in raw_cache.items():
-                            if isinstance(c_data, dict):
-                                # 1. Extract Status safely
-                                status_str = str(c_data.get('Availability', ''))
-                                avail_dict[c_code] = status_str
-                                
-                                # 2. Extract Fare safely
-                                real_f = c_data.get('Fare') or c_data.get('fare') or c_data.get('totalFare')
-                                if real_f:
-                                    fares_dict[c_code] = int(real_f)
-                                    if fare == 0:
-                                        fare = int(real_f)
-                                        
-                        # 🕵️‍♂️ THE HACKER TRICK: Agar upar wale loop se data nahi mila, toh 'avlClassesSorted' me dhoondho!
-                        if not avail_dict:
-                            # ConfirmTkt kabhi kabhi classes ki ek list bhejta hai
-                            class_list = t.get('avlClassesSorted', [])
-                            for cls in class_list:
-                                # Hum '3A_TQ' ya '3A_GN' se '3A' nikal lenge
-                                base_cls = cls.split('_')[0] if '_' in cls else cls
-                                # Dummy fallback agar strict extraction fail ho rahi hai (Hum ise EST nahi dikhana chahte)
-                                avail_dict[base_cls] = f"AVAILABLE-0058" # Temporary safety net
-                                
-                    except Exception:
-                        pass
-                    
-                    if fare == 0:
-                        fares_list = t.get('ticketFares', [])
-                        if fares_list and isinstance(fares_list, list) and len(fares_list) > 0:
-                            fare = int(fares_list[0].get('fare', 0))
-                            
-                    t_type = "Premium" if ("SHATABDI" in train_name.upper() or "VANDE" in train_name.upper() or "RAJDHANI" in train_name.upper()) else "Express"
 
-                    if fare == 0:
-                        assumed_dist = 300 
-                        fare = int((assumed_dist * 2.5) + 150) if t_type == 'Premium' else int((assumed_dist * 1.2) + 50)
-                    
-                    # Yahan aakhiri me 'fares_dict' add kiya gaya hai
-                    parsed_trains.append([train_no, train_name, dep_time, arr_time, duration, t_type, fare, avail_dict, fares_dict])
-                
-                if len(parsed_trains) > 0:
-                    # Yahan columns me 'Fares_Dict' add kiya gaya hai
-                    route_trains = pd.DataFrame(parsed_trains, columns=['Train_No', 'Train_Name', 'Dep', 'Arr', 'Dur', 'Type', 'Base_Fare', 'Avail_Dict', 'Fares_Dict'])
-                    route_trains = route_trains.drop_duplicates(subset=['Train_No'])
-                    st.success("🟢 Connected to Live IRCTC Server (Real Fares Loaded!)")
-                    return route_trains
-                else:
-                    raise Exception("API connected, but no valid train data found.")
-            else:
-                raise Exception(f"Server Error Status Code: {response.status_code}")
-                
-        except Exception as e:
-            st.warning("⚠️ Live Network busy, switching to Intelligent Fallback Engine...")
-            
-    # STEP 3: THE SMART SIMULATION (Jab kuch na mile)
+    # ====================================================================
+    # STEP 4: SMART SIMULATION (FALLBACK ENGINE)
+    # ====================================================================
+    st.warning("⚠️ Live Network & Database busy, switching to Intelligent Fallback Engine...")
     st.markdown("""
     <div style='background: rgba(255, 145, 0, 0.1); border-left: 4px solid #FF9100; border-radius: 8px; padding: 16px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(255, 145, 0, 0.15); backdrop-filter: blur(8px);'>
         <div style='color: #FF9100; font-size: 1.15rem; font-weight: 800; letter-spacing: 1px; margin-bottom: 6px; text-transform: uppercase;'>
             🔄 System Override: Telemetry Simulation Active
         </div>
         <div style='color: #E2E8F0; font-size: 1rem;'>
-            <span style='color: #00E5FF; font-weight: 700;'>Status:</span> Live API unreachable. Injecting dynamic, high-fidelity simulated route data to maintain dashboard integrity for analysis.
+            <span style='color: #00E5FF; font-weight: 700;'>Status:</span> All engines unreachable. Injecting dynamic simulated data.
         </div>
     </div>
     """, unsafe_allow_html=True)
+    
+    route_key = "-".join(sorted([origin_code, dest_code]))
+    hash_num = int(hashlib.md5(route_key.encode()).hexdigest(), 16)
+    sim_dist = (hash_num % 2000) + 200 
+    
+    # Simulate data fallback...
+    # 🌍 SMART GIS DISTANCE CALCULATOR (DYNAMIC)
+    # Using Hashing to generate a consistent simulated distance for ANY station combination
+    import hashlib
+    
+    # Create a unique but consistent string for the route (e.g. "NDLS-MAS" or "MAS-NDLS")
+    route_key = "-".join(sorted([origin_code, dest_code]))
+    
+    # Hash it to get a deterministic number
+    hash_num = int(hashlib.md5(route_key.encode()).hexdigest(), 16)
+    
+    # Map the hash to a realistic distance between 200 KM and 2200 KM
+    sim_dist = (hash_num % 2000) + 200 
+    
+    # (No need for the old station_coords dictionary anymore)
+
     # 🌍 SMART GIS DISTANCE CALCULATOR (DYNAMIC)
     # Using Hashing to generate a consistent simulated distance for ANY station combination
     import hashlib
@@ -795,97 +906,141 @@ with col4:
     
     # Background logic: Auto-calculate days left for the AI Model
     days_to_journey = max(1, (journey_date - today).days)
-    
-with col5:
-    st.markdown("<div style='margin-bottom: 5px; color: #FFFFFF; font-size: 1.1rem; font-weight: 800; text-shadow: 2px 2px 5px rgba(0,0,0,1.0), 0 0 15px rgba(0,229,255,0.5);'>Live Status</div>", unsafe_allow_html=True)
-    
-    short_class = selected_class.split("(")[-1].replace(")", "").strip()
-    real_avail_str = None
-    
-    # 🕵️‍♂️ STEP 1: API CACHE SEARCH (Try fetching real first)
-    if train_data is not None and 'Avail_Dict' in train_data:
-        avail_cache = train_data['Avail_Dict']
-        if isinstance(avail_cache, dict):
-            real_avail_str = avail_cache.get(short_class)
-            if not real_avail_str:
-                for k, v in avail_cache.items():
-                    if short_class in str(k) and v:
-                        real_avail_str = str(v)
-                        break
-    
-    # 🚀 STEP 2: RENDER UI
-    if real_avail_str and len(str(real_avail_str)) > 2:
-        import re
-        status_text = str(real_avail_str).upper().strip()
-        status_text = re.sub(r'[^A-Z0-9]', '', status_text)
+    with col5:
+        st.markdown("<div style='margin-bottom: 5px; color: #FFFFFF; font-size: 1.1rem; font-weight: 800; text-shadow: 2px 2px 5px rgba(0,0,0,1.0), 0 0 15px rgba(0,229,255,0.5);'>Live Status</div>", unsafe_allow_html=True)
         
-        if "AVL" in status_text or "AVAILABLE" in status_text or "AV" in status_text:
-            nums = re.findall(r'\d+', status_text)
-            avl = int(nums[-1]) if nums else 0
-            if avl > 1500: avl = 0
-            color = "#00E676" 
-            disp = f"AVL<br>{avl}"
-            seats_booked_pct = max(10, 100 - avl)
-            
-        elif "RAC" in status_text:
-            nums = re.findall(r'\d+', status_text)
-            rac = int(nums[-1]) if nums else 0
-            if rac > 500: rac = 0
-            color = "#FFD600" 
-            disp = f"RAC<br>{rac}"
-            seats_booked_pct = 100 + int(rac / 2)
-            
-        elif "WL" in status_text or "WAIT" in status_text:
-            nums = re.findall(r'\d+', status_text)
-            wl = int(nums[-1]) if nums else 0
-            if wl > 900: wl = 0
-            color = "#FF9100" 
-            disp = f"WL<br>{wl}"
-            seats_booked_pct = 100 + wl
-            
-        elif "REGRET" in status_text or "NOT" in status_text:
-            color = "#FF1744" 
-            disp = "FULL<br>REGRET"
-            seats_booked_pct = 150
-        else:
-            real_avail_str = None # Force fallback on garbage data
-            
-    # 🟢 OPTION B: MATHEMATICAL PRESENTATION SIMULATOR (The Magic Fallback)
-    if not real_avail_str or len(str(real_avail_str)) <= 2:
-        import random
-        # Seed lock: Ensures the same train+date combo gives the same result every time!
-        sim_seed = sum(ord(c) for c in str(selected_train_no)) + days_to_journey + sum(ord(c) for c in selected_class)
-        random.seed(sim_seed)
+        short_class = selected_class.split("(")[-1].replace(")", "").strip()
+        formatted_date = journey_date.strftime("%d-%m-%Y")
         
-        base_fill = 120 - days_to_journey # Closer dates = higher fill rate
-        class_mod = 15 if any(x in selected_class for x in ["SL", "3A", "CC"]) else -20
-        noise = random.randint(-8, 12)
-        seats_booked_pct = max(5, min(135, base_fill + class_mod + noise))
+        # 🚨 THE FIX: Global Default variables for ML Fare Prediction
+        seats_booked_pct = 85 
+        adjusted_base_fare = 500
         
-        if seats_booked_pct <= 100:
-            seats_avail = int((100 - seats_booked_pct) * 3) + random.randint(11, 45) 
-            color = "#00E676" 
-            disp = f"AVL<br>{seats_avail:02d}" 
-        elif seats_booked_pct <= 115:
-            rac_number = int((seats_booked_pct - 100) * 2) + random.randint(5, 20)
-            color = "#FFD600" 
-            disp = f"RAC<br>{rac_number}"
-        else:
-            wl_number = int((seats_booked_pct - 110) * 3) + random.randint(10, 50)
-            color = "#FF9100" 
-            disp = f"WL<br>{wl_number}"
+        # 🔄 Fetch Data from RailYatri
+        live_data = fetch_live_seat_status(selected_train_no, short_class, origin_code, dest_code, formatted_date)
+        
+        # 🚨 THE SMART ERROR HANDLER (Updated for Date Mismatch)
+        error_msg = live_data.get("error")
+        
+        if error_msg:
+            # Route mismatch
+            if "not an Intermediate Station" in str(error_msg) or "Intermediate" in str(error_msg):
+                st.warning(f"⚠️ Train **{selected_train_no}** ka is route par stoppage nahi hai. Kripya doosri train chunein.", icon="🚫")
             
-    # Render final box (API or Simulator - both will look identical and real)
-    st.markdown(f"""
-    <div style="background: rgba(0,0,0, 0.4); border: 2px solid {color}; border-radius: 8px; padding: 10px 2px; text-align: center; box-shadow: inset 0 0 10px {color}40;">
-        <div style="color: {color}; font-size: 1.1rem; font-weight: 900; line-height: 1.2;">{disp}</div>
-    </div>
-    """, unsafe_allow_html=True)
+            # Date mismatch (The exact error you got earlier)
+            elif "Unable to process" in str(error_msg) or "Cancelled" in str(error_msg):
+                st.warning(f"📆 Train **{selected_train_no}** is tareekh ko nahi chalti ya iska quota band hai. Kripya doosri Date ya Train chunein.", icon="📅")
+                
+            # Unknown technical issues
+            else:
+                st.error(f"📡 Data Fetch Issue: {error_msg}")
+                
+        elif live_data.get("seat_availibility") and len(live_data["seat_availibility"]) > 0:
+            seat_list = live_data["seat_availibility"]
+            
+            # 1. 🎯 MAIN CARD DATA (Today's Selection)
+            # ... (Aapka purana Flexbox wala code yahan se waisa hi rahega)
+            
+            # 1. 🎯 MAIN CARD DATA (Today's Selection)
+            main_day = seat_list[0]
+            real_fare = main_day.get("total_fare", "--")
+            
+            # 🚨 THE FIX: Extract exact numerical fare for ML Model
+            try: adjusted_base_fare = int(real_fare)
+            except: pass
+            
+            raw_status = str(main_day.get("availablity_status", "N/A")).upper()
+            
+            if "WL" in raw_status or "RAC" in raw_status:
+                prediction_text = main_day.get("cp_perc", "CHECKING...")
+            else:
+                prediction_text = "CONFIRMED SEAT"
+                
+            import re
+            clean_status = raw_status.split("/")[-1] if "/" in raw_status else raw_status
+            
+            # 🚨 THE FIX: Calculate 'seats_booked_pct' mathematically for ML model
+            if "AVL" in clean_status or "AVAILABLE" in clean_status or "AV" in clean_status:
+                nums = re.findall(r'\d+', clean_status)
+                avl = int(nums[-1]) if nums else 0
+                seats_booked_pct = max(10, 100 - avl)  # AVL hone par percentage nikalega
+                color, disp = "#00E676", f"AVL<br>{avl:02d}" if avl > 0 else "AVAILABLE"
+            elif "RAC" in clean_status:
+                nums = re.findall(r'\d+', clean_status)
+                rac = int(nums[-1]) if nums else 0
+                seats_booked_pct = 100 + int(rac / 2)  # RAC hone par load badhayega
+                color, disp = "#FFD600", clean_status.replace("RAC", "RAC<br>")
+            elif "WL" in clean_status or "WAIT" in clean_status:
+                nums = re.findall(r'\d+', clean_status)
+                wl = int(nums[-1]) if nums else 0
+                seats_booked_pct = 110 + wl            # WL hone par maximum load
+                clean_status = re.sub(r'([A-Z]+)(\d+)', r'\1 \2', clean_status) 
+                color, disp = "#FF9100", clean_status.replace(" ", "<br>")
+            else:
+                seats_booked_pct = 150                 # REGRET yani Overloaded
+                color, disp = "#FF1744", "REGRET<br>FULL"
+                prediction_text = "NO CHANCE"
+
+            # 🎨 RENDER 3D PREMIUM CARD
+            fare_badge = f"<div style='background: rgba(255,255,255,0.1); color: #00E5FF; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; margin-top: 8px; font-weight: 900; border: 1px solid rgba(0,229,255,0.3); box-shadow: 0 0 10px rgba(0,229,255,0.2);'>FARE: ₹{real_fare}</div>"
+            
+            st.markdown(f"""
+            <div style="background: linear-gradient(145deg, #1E293B, #0F172A); border: 2px solid {color}; border-radius: 10px; padding: 12px 5px; text-align: center; box-shadow: 0 4px 15px {color}30; display: flex; flex-direction: column; align-items: center;">
+                <div style="color: {color}; font-size: 1.4rem; font-weight: 900; line-height: 1.1; text-shadow: 1px 1px 5px rgba(0,0,0,0.8);">{disp}</div>
+                <div style="color: #94A3B8; font-size: 0.75rem; margin-top: 6px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">
+                    {prediction_text}
+                </div>
+                {fare_badge}
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Yahan se aapka Flexbox/Calendar wala purana code exactly waisa hi rahega...
+            # st.markdown("<br>", unsafe_allow_html=True) ...
+            
+            # ====================================================================
+            # 📅 FEATURE: 6-DAY AVAILABILITY CALENDAR (MakeMyTrip Style Slider)
+            # ====================================================================
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='color: #00E5FF; font-size: 1.1rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); margin-bottom: 15px;'>📅 Next 6 Days ({short_class})</h4>", unsafe_allow_html=True)
+            
+            # 🔥 Flexbox Container (No Indentation Bug)
+            calendar_html = '<style>.scroll-hide::-webkit-scrollbar { height: 6px; } .scroll-hide::-webkit-scrollbar-thumb { background: #00E5FF50; border-radius: 10px; } .scroll-hide::-webkit-scrollbar-track { background: transparent; }</style>'
+            calendar_html += '<div class="scroll-hide" style="display: flex; overflow-x: auto; gap: 12px; padding-bottom: 12px; scroll-behavior: smooth;">'
+            
+            for idx, day_data in enumerate(seat_list[:6]):
+                # 1. Smart Date Parsing
+                date_dict = day_data.get("date_format", {})
+                display_date = f"{date_dict.get('date', '')} {date_dict.get('month', '')}".strip()
+                if not display_date:
+                    display_date = day_data.get("availablity_date", "")[:5]
+                
+                raw_st = str(day_data.get("availablity_status", "")).upper()
+                c_stat = raw_st.split("/")[-1] if "/" in raw_st else raw_st
+                pct = day_data.get("cp_percentage", "")
+                
+                # 2. Dynamic Colors & Badges
+                if "AVL" in c_stat or "AVAILABLE" in c_stat:
+                    box_color, chance_text, badge_bg = "#00E676", "Available", "rgba(0, 230, 118, 0.15)"
+                    nums = re.findall(r'\d+', c_stat)
+                    c_stat = f"AVL {int(nums[-1]):02d}" if nums else "AVL"
+                elif "RAC" in c_stat: 
+                    box_color, chance_text, badge_bg = "#FFD600", f"{pct}% Chance" if pct else "RAC", "rgba(255, 214, 0, 0.15)"
+                elif "WL" in c_stat or "WAIT" in c_stat: 
+                    box_color, chance_text, badge_bg = "#FF9100", f"{pct}% Chance" if pct else "Waitlist", "rgba(255, 145, 0, 0.15)"
+                    c_stat = re.sub(r'([A-Z]+)(\d+)', r'\1 \2', c_stat)
+                else: 
+                    box_color, c_stat, chance_text, badge_bg = "#FF1744", "REGRET", "No Chance", "rgba(255, 23, 68, 0.15)"
+
+                # 3. Generating Individual Premium Cards (Ek Single Line me taaki Streamlit code print na kare)
+                calendar_html += f'<div style="min-width: 95px; flex-shrink: 0; background: linear-gradient(145deg, #1E293B, #0F172A); border: 1px solid {box_color}60; border-radius: 12px; padding: 14px 10px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4);"><div style="color: #94A3B8; font-size: 0.85rem; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px;">{display_date}</div><div style="color: {box_color}; font-size: 1.15rem; font-weight: 900; margin-bottom: 8px; text-shadow: 0 0 8px {box_color}40;">{c_stat}</div><div style="color: {box_color}; font-size: 0.7rem; font-weight: 800; background: {badge_bg}; border-radius: 20px; padding: 4px 2px; letter-spacing: 0.5px;">{chance_text}</div></div>'
+
+            calendar_html += "</div>"
+            st.markdown(calendar_html, unsafe_allow_html=True)
 
 # ====================================================================
     # 🌡️ FEATURE 3 ENHANCED: LIVE DEMAND TRACKER (Urgency Meter)
     # ====================================================================
-    with st.container():
+with st.container():
         import random
         # Smart Logic: Date paas hone par aur demand high hone par numbers badh jayenge
         base_fomo = random.randint(18, 45) + max(0, (30 - days_to_journey)) * 3
