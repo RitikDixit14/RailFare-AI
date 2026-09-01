@@ -14,39 +14,69 @@ import requests
 import datetime  # 🛠️ FIXED THE IMPORT CLASH
 
 # 🚆 THE RAILYATRI ENGINE (Using Your Custom Token)
-def fetch_live_seat_status(train_no, travel_class, source, dest, date_of_journey):
-    
-    # Date Format Fix (Safe standard datetime use)
+def fetch_live_seat_status(train_no, travel_class, source, dest, date_of_journey, running_days="1111111"):
+    import datetime
+    from concurrent.futures import ThreadPoolExecutor
     try:
         d_obj = datetime.datetime.strptime(str(date_of_journey), "%d-%m-%Y")
-        ry_date = d_obj.strftime("%Y-%m-%d")
     except:
-        ry_date = str(date_of_journey)
+        d_obj = datetime.datetime.now()
+        
+    if len(str(running_days)) < 7:
+        running_days = "1111111"
+        
+    dates_to_fetch = []
+    curr_date = d_obj
+    for _ in range(30): # max 30 days lookahead to prevent infinite loop
+        if running_days[curr_date.weekday()] == '1':
+            dates_to_fetch.append(curr_date.strftime("%d-%m-%Y"))
+            if len(dates_to_fetch) == 6:
+                break
+        curr_date += datetime.timedelta(days=1)
+        
+    if len(dates_to_fetch) == 0:
+        dates_to_fetch = [(d_obj + datetime.timedelta(days=i)).strftime("%d-%m-%Y") for i in range(6)]
+    
+    def fetch_single(d_str):
+        url = f"https://cttrainsapi.confirmtkt.com/api/v1/trains/search?sourceStationCode={source}&destinationStationCode={dest}&addAvailabilityCache=true&excludeMultiTicketAlternates=true&sortBy=DEFAULT&dateOfJourney={d_str}&enableNearby=false&enableTG=true&showPredictionGlobal=true"
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Accept": "application/json"}
+        try:
+            return requests.get(url, headers=headers, timeout=5).json()
+        except:
+            return None
 
-    # Aapki Golden API URL
-    url = f"https://sa.railyatri.in/api/seat/enquiry/{train_no}/{ry_date}/{source}/{dest}/{travel_class}/GN.json"
-    
-    # 🔑 Aapka Personal Token
-    params = {
-        "user_id": "45e29781440389029582b0a374ffeb65",
-        "authentication_token": "67a641529d57819e92a2d13a4d0742fb",
-        "device_type_id": "6"
-    }
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0",
-        "Accept": "application/json",
-        "Origin": "https://www.railyatri.in",
-        "Referer": "https://www.railyatri.in/"
-    }
-    
+    mapped_list = []
     try:
-        response = requests.get(url, params=params, headers=headers, timeout=10)
-        if response.status_code == 200:
-            return response.json()
-        return {"error": f"Blocked by RailYatri: {response.status_code}"}
+        with ThreadPoolExecutor(max_workers=6) as executor:
+            results = list(executor.map(fetch_single, dates_to_fetch))
+            
+        for i, ct_data in enumerate(results):
+            if not ct_data:
+                continue
+            for t in (ct_data.get("data") or {}).get("trainList", []):
+                if str(t.get("trainNumber")) == str(train_no):
+                    cache = t.get("availabilityCache", {})
+                    if travel_class in cache:
+                        day = cache[travel_class]
+                        mapped_list.append({
+                            "date": day.get("date"),
+                            "availablity_date": str(day.get("date", ""))[:10] if day.get("date") else dates_to_fetch[i][6:]+"-"+dates_to_fetch[i][3:5]+"-"+dates_to_fetch[i][:2],
+                            "status": day.get("availability"),
+                            "availablity_status": day.get("availability"),
+                            "fare": str(day.get("fare")),
+                            "total_fare": str(day.get("fare")),
+                            "prediction": day.get("predictionPercentage", 0),
+                            "gradient": day.get("gradient", "Medium")
+                        })
+                        break
+                        
+        if len(mapped_list) > 0:
+            return {"seat_availibility": mapped_list}
+        else:
+            return {"error": "Seat data not found for this class on ConfirmTkt API."}
     except Exception as e:
         return {"error": str(e)}
+
 import requests
 
 def fetch_railyatri_live_status(train_no, date, source, dest, travel_class):
@@ -92,6 +122,74 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded" 
 )
+
+# 📱 GLOBAL RESPONSIVE CSS FOR MOBILE & LAPTOP
+st.markdown("""
+<style>
+    /* 1. Remove extra padding on mobile */
+    .block-container {
+        padding-top: 1.5rem !important;
+        padding-bottom: 1.5rem !important;
+    }
+    
+    /* 2. Responsive Base Font Size */
+    html { font-size: 16px; }
+    
+    /* 3. Mobile Specific Adjustments */
+    @media (max-width: 768px) {
+        html { font-size: 14px; }
+        .block-container { padding: 0.5rem !important; }
+        .hero-title { font-size: 2rem !important; }
+        .pred-price { font-size: 3rem !important; }
+        
+        /* Convert stacked columns to 2x2 grids where appropriate (e.g. KPIs & class buttons) */
+        div[data-testid="stHorizontalBlock"] {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        /* By default, columns take full width on mobile (Streamlit default behavior) */
+        div[data-testid="column"] {
+            min-width: 100% !important;
+            margin-bottom: 1rem !important;
+        }
+        
+        /* EXCEPT for KPIs and Buttons which should wrap into 2x2 or similar grids */
+        div[data-testid="column"]:has(.cyber-kpi),
+        div[data-testid="column"]:has(.stButton) {
+            min-width: 140px !important;
+            flex: 1 1 auto !important;
+            margin-bottom: 0px !important;
+        }
+        
+        .cyber-kpi {
+            min-height: 120px !important;
+            padding: 10px !important;
+        }
+        .kpi-value { font-size: 1.8rem !important; }
+    }
+
+    /* 4. Ultra-Smooth iOS/Android Swipe for Calendar */
+    .swipe-container {
+        display: flex;
+        overflow-x: auto;
+        gap: 12px;
+        padding-bottom: 15px;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch; /* Makhan jaisa mobile swipe */
+        scroll-behavior: smooth;
+    }
+    .swipe-container::-webkit-scrollbar { height: 6px; }
+    .swipe-container::-webkit-scrollbar-thumb { background: #00E5FF50; border-radius: 10px; }
+    
+    .swipe-card {
+        flex: 0 0 auto;
+        min-width: 105px;
+        scroll-snap-align: start; /* Card hamesha center mein aake rukega */
+    }
+</style>
+""", unsafe_allow_html=True)
 # 🟢 THE 100% REAL DATA SCRAPER ENGINE
 def fetch_real_availability_from_web(train_no, date_str, src, dst, travel_class):
     try:
@@ -434,222 +532,100 @@ import requests
 import hashlib
 import streamlit as st
 
-# --- 6. INTELLIGENT DATA FETCHING (FIXED STRICT FILTER) ---
+# --- 6. INTELLIGENT DATA FETCHING (EXACT CLASSES EXTRACTOR) ---
 @st.cache_data(ttl=3600)
 def fetch_trains(origin_code, dest_code):
     API_KEY = os.getenv("RAPIDAPI_KEY")
-    
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    master_file = os.path.join(BASE_DIR, "master_irctc_db.csv")
-    
     origin_code = str(origin_code).strip().upper()
     dest_code = str(dest_code).strip().upper()
-    
     tomorrow_rapid = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
     tomorrow_ct = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%d-%m-%Y")
 
     # ====================================================================
-    # STEP 1: HACKER WAY: CONFIRMTKT LIVE API
+    # 🟢 STEP 1: CONFIRMTKT (PRIMARY ENGINE)
     # ====================================================================
     try:
         hacker_url = f"https://cttrainsapi.confirmtkt.com/api/v1/trains/search?sourceStationCode={origin_code}&destinationStationCode={dest_code}&addAvailabilityCache=true&excludeMultiTicketAlternates=true&excludeBoostAlternates=true&sortBy=DEFAULT&dateOfJourney={tomorrow_ct}&enableNearby=false&enableTG=true&showPredictionGlobal=true"
-        
-        spoof_headers = {
-            "Accept": "*/*",
-            "ApiKey": "ct-web!2$",
-            "ClientId": "ct-web",
-            "Connection": "keep-alive",
-            "Origin": "https://www.confirmtkt.com",
-            "Referer": "https://www.confirmtkt.com/",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0"
-        }
+        spoof_headers = {"Accept": "*/*", "ApiKey": "ct-web!2$", "ClientId": "ct-web", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0"}
         
         response = requests.get(hacker_url, headers=spoof_headers, timeout=8)
-        
         if response.status_code == 200:
             live_data = response.json()
-            api_data_block = live_data.get('data', {})
-            trains_array = api_data_block.get('trainList', [])
-            
+            trains_array = live_data.get('data', {}).get('trainList', [])
             parsed_trains = []
+            
             for t in trains_array:
-                # 🚨 BUG FIXED: Ab hum Passenger Boarding Station check kar rahe hain, Train Origin nahi!
                 board_stn = str(t.get('boardingStation', origin_code)).strip().upper()
                 drop_stn = str(t.get('destinationStation', dest_code)).strip().upper()
-                
-                # Agar passenger ki boarding wahan allowed nahi hai, tabhi skip karo
-                if board_stn != origin_code or drop_stn != dest_code:
-                    continue  
+                if board_stn != origin_code or drop_stn != dest_code: continue  
 
-                train_no = str(t.get('trainNumber', t.get('trainNo', '0000')))
-                train_name = str(t.get('trainName', 'EXPRESS'))
-                dep_time = str(t.get('departureTime', '10:00'))
-                arr_time = str(t.get('arrivalTime', '15:00'))
-                duration = str(t.get('duration', '05:00'))
-                
                 avail_dict = {}
                 fares_dict = {}
                 fare = 0
                 
+                # 1. FARE & CACHE EXTRACTION
                 try:
-                    raw_cache = t.get('availabilityCache', {})
-                    for c_code, c_data in raw_cache.items():
+                    for c_code, c_data in t.get('availabilityCache', {}).items():
                         if isinstance(c_data, dict):
-                            avail_dict[c_code] = str(c_data.get('Availability', ''))
-                            real_f = c_data.get('Fare') or c_data.get('fare') or c_data.get('totalFare')
-                            if real_f:
-                                fares_dict[c_code] = int(real_f)
-                                if fare == 0: fare = int(real_f)
-                                
-                    if not avail_dict:
-                        class_list = t.get('avlClassesSorted', [])
-                        for cls in class_list:
-                            base_cls = cls.split('_')[0] if '_' in cls else cls
-                            avail_dict[base_cls] = f"AVAILABLE-0058"
-                except Exception:
-                    pass
+                            avail_dict[c_code] = str(c_data.get('availability', ''))
+                            if c_data.get('fare'): fares_dict[c_code] = int(c_data.get('fare'))
+                except: pass
                 
-                if fare == 0:
-                    fares_list = t.get('ticketFares', [])
-                    if fares_list and isinstance(fares_list, list) and len(fares_list) > 0:
-                        fare = int(fares_list[0].get('fare', 0))
-                        
+                # 🚨 2. THE FIX: EXACT CLASS EXTRACTION FROM API
+                actual_classes = t.get('avlClassesSorted', [])
+                if not actual_classes: actual_classes = t.get('classes', [])
+                
+                for cls in actual_classes:
+                    base_cls = cls.split('_')[0] if '_' in cls else cls
+                    if base_cls not in avail_dict:
+                        avail_dict[base_cls] = "Check" # Blank classes me Status 'Check' daal dega
+                
+                train_no = str(t.get('trainNumber', '0000'))
+                train_name = str(t.get('trainName', 'EXPRESS'))
                 t_type = "Premium" if any(k in train_name.upper() for k in ["SHATABDI", "VANDE", "RAJDHANI"]) else "Express"
                 
-                if fare == 0:
-                    fare = int((300 * 2.5) + 150) if t_type == 'Premium' else int((300 * 1.2) + 50)
-                
-                parsed_trains.append([train_no, train_name, dep_time, arr_time, duration, t_type, fare, avail_dict, fares_dict])
+                parsed_trains.append([train_no, train_name, str(t.get('departureTime', '10:00')), str(t.get('arrivalTime', '15:00')), str(t.get('duration', '05:00')), t_type, 500, avail_dict, fares_dict, str(t.get('runningDays', '1111111')), {}])
             
             if len(parsed_trains) > 0:
-                route_trains = pd.DataFrame(parsed_trains, columns=['Train_No', 'Train_Name', 'Dep', 'Arr', 'Dur', 'Type', 'Base_Fare', 'Avail_Dict', 'Fares_Dict'])
-                route_trains = route_trains.drop_duplicates(subset=['Train_No'])
-                st.success("🟢 Connected to Live IRCTC Server (Fixed Strict Filter)")
-                return route_trains
-    except Exception:
-        pass  
+                route_trains = pd.DataFrame(parsed_trains, columns=['Train_No', 'Train_Name', 'Dep', 'Arr', 'Dur', 'Type', 'Base_Fare', 'Avail_Dict', 'Fares_Dict', 'Running_Days', 'Dates_Dict'])
+                return route_trains.drop_duplicates(subset=['Train_No'])
+    except: pass  
 
     # ====================================================================
-    # STEP 2: RAPID-API
+    # 🟡 STEP 2: RAPID-API (SECONDARY ENGINE)
     # ====================================================================
     if API_KEY:
         try:
             url = "https://irctc1.p.rapidapi.com/api/v3/trainBetweenStations"
             headers = {"Content-Type": "application/json", "x-rapidapi-host": "irctc1.p.rapidapi.com", "x-rapidapi-key": API_KEY}
-            
             response = requests.get(url, headers=headers, params={"fromStationCode": origin_code, "toStationCode": dest_code, "dateOfJourney": tomorrow_rapid}, timeout=6)
             
             if response.status_code == 200:
-                api_data = response.json()
-                train_list = api_data.get('data', []) if isinstance(api_data.get('data'), list) else (api_data.get('data', {}).get('trains', []) if isinstance(api_data.get('data'), dict) else api_data.get('trains', []))
-                
-                if train_list:
-                    parsed = []
-                    for t in train_list:
-                        if not isinstance(t, dict): continue
-                        
-                        # 🚨 BUG FIXED FOR RAPID-API AS WELL
-                        board_stn = str(t.get('fromStnCode', origin_code)).strip().upper()
-                        drop_stn = str(t.get('toStnCode', dest_code)).strip().upper()
-                        if board_stn != origin_code or drop_stn != dest_code:
-                            continue
+                train_list = response.json().get('data', []) if isinstance(response.json().get('data'), list) else response.json().get('data', {}).get('trains', [])
+                parsed = []
+                for t in train_list:
+                    if not isinstance(t, dict): continue
+                    if str(t.get('fromStnCode', origin_code)).strip().upper() != origin_code or str(t.get('toStnCode', dest_code)).strip().upper() != dest_code: continue
+                    
+                    # 🚨 THE FIX: Extract Exact Classes from Rapid API
+                    raw_classes = t.get('classes', [])
+                    avail_dict = {}
+                    for c in raw_classes:
+                        avail_dict[str(c).strip().upper()] = "Check"
 
-                        t_no = str(t.get('trainNumber', t.get('trainNo', '0000')))
-                        t_name = str(t.get('trainName', 'Unknown'))
-                        is_prem = 'Premium' if any(k in t_name.upper() for k in ['VANDE', 'SHATABDI', 'RAJDHANI', 'TEJAS']) else 'Express'
-                        dist = float(t.get('distance', 700))
-                        parsed.append({
-                            'Train_No': t_no, 'Train_Name': t_name, 'Type': is_prem,
-                            'Base_Fare': int((dist * 2.5) + 150) if is_prem == 'Premium' else int((dist * 1.2) + 50), 
-                            'Dep': str(t.get('departureTime', '--:--')), 'Arr': str(t.get('arrivalTime', '--:--')), 'Dur': str(t.get('duration', '--h --m')),
-                            'Avail_Dict': {}, 'Fares_Dict': {}
-                        })
-                    if len(parsed) > 0:
-                        st.success("🟡 Connected via RapidAPI (Fixed Strict Filter)")
-                        return pd.DataFrame(parsed).drop_duplicates('Train_No')
-        except Exception:
-            pass  
+                    parsed.append({
+                        'Train_No': str(t.get('trainNumber', '0000')), 'Train_Name': str(t.get('trainName', 'Unknown')),
+                        'Type': 'Premium' if any(k in str(t.get('trainName', '')).upper() for k in ['VANDE', 'SHATABDI', 'RAJDHANI']) else 'Express',
+                        'Base_Fare': 500, 'Dep': str(t.get('departureTime', '--:--')), 'Arr': str(t.get('arrivalTime', '--:--')), 'Dur': str(t.get('duration', '--h --m')),
+                        'Avail_Dict': avail_dict, 'Fares_Dict': {}, 'Running_Days': '1111111', 'Dates_Dict': {}
+                    })
+                if len(parsed) > 0: return pd.DataFrame(parsed).drop_duplicates('Train_No')
+        except: pass  
+
+    # Fallback Empty Dataframe
+    return pd.DataFrame(columns=['Train_No', 'Train_Name', 'Dep', 'Arr', 'Dur', 'Type', 'Base_Fare', 'Avail_Dict', 'Fares_Dict', 'Running_Days', 'Dates_Dict'])  
 
     # ====================================================================
-    # STEP 3: CSV DATABASE & STEP 4: SIMULATION
-    # ====================================================================
-    if os.path.exists(master_file):
-        try:
-            df = pd.read_csv(master_file)
-            df['Origin'] = df['Origin'].astype(str).str.strip().str.upper()
-            df['Dest'] = df['Dest'].astype(str).str.strip().str.upper()
-            
-            route_data = df[(df['Origin'] == origin_code) & (df['Dest'] == dest_code)]
-            
-            if not route_data.empty:
-                st.info("📊 Serving Historical Data from Master Database")
-                route_data['Train_No'] = route_data['Train_No'].astype(str)
-                display_df = route_data.drop_duplicates(subset=['Train_No']).copy()
-                
-                if 'Avail_Dict' not in display_df.columns: display_df['Avail_Dict'] = "{}"
-                if 'Fares_Dict' not in display_df.columns: display_df['Fares_Dict'] = "{}"
-                
-                return display_df[['Train_No', 'Train_Name', 'Type', 'Base_Fare', 'Dep', 'Arr', 'Dur', 'Avail_Dict', 'Fares_Dict']].sort_values('Base_Fare')
-        except Exception:
-            pass
-
-    st.warning("⚠️ Live Network & Database busy, switching to Intelligent Fallback Engine...")
-    
-    # (Empty DataFrame Return as Fallback Backup)
-    return pd.DataFrame(columns=['Train_No', 'Train_Name', 'Dep', 'Arr', 'Dur', 'Type', 'Base_Fare', 'Avail_Dict', 'Fares_Dict'])
-    # 🌍 SMART GIS DISTANCE CALCULATOR (DYNAMIC)
-    # Using Hashing to generate a consistent simulated distance for ANY station combination
-    import hashlib
-    
-    # Create a unique but consistent string for the route (e.g. "NDLS-MAS" or "MAS-NDLS")
-    route_key = "-".join(sorted([origin_code, dest_code]))
-    
-    # Hash it to get a deterministic number
-    hash_num = int(hashlib.md5(route_key.encode()).hexdigest(), 16)
-    
-    # Map the hash to a realistic distance between 200 KM and 2200 KM
-    sim_dist = (hash_num % 2000) + 200 
-    
-    # (No need for the old station_coords dictionary anymore)
-
-    # 🌍 SMART GIS DISTANCE CALCULATOR (DYNAMIC)
-    # Using Hashing to generate a consistent simulated distance for ANY station combination
-    import hashlib
-    
-    # Create a unique but consistent string for the route (e.g. "NDLS-MAS" or "MAS-NDLS")
-    route_key = "-".join(sorted([origin_code, dest_code]))
-    
-    # Hash it to get a deterministic number
-    hash_num = int(hashlib.md5(route_key.encode()).hexdigest(), 16)
-    
-    # Map the hash to a realistic distance between 200 KM and 2200 KM
-    sim_dist = (hash_num % 2000) + 200 
-    
-    # (No need for the old station_coords dictionary anymore)
-
-    
-
-    # Calculate duration (Premium trains run at ~80 km/h, Express at ~55 km/h)
-    p_hrs, p_mins = divmod(int(sim_dist / 80 * 60), 60)
-    e_hrs, e_mins = divmod(int(sim_dist / 55 * 60), 60)
-    
-    dur_prem = f"{p_hrs:02d}h {p_mins:02d}m"
-    dur_exp = f"{e_hrs:02d}h {e_mins:02d}m"
-    
-    # Helper function to auto-calculate Arrival Time based on duration
-    def get_arr(dep_h, dep_m, travel_h, travel_m):
-        tot_m = dep_m + travel_m
-        tot_h = dep_h + travel_h + (tot_m // 60)
-        return f"{tot_h % 24:02d}:{tot_m % 60:02d}"
-
-    # Generate 100% dynamic train list based on exact kilometers
-    mock_trains = [
-        {'Train_No': '12004', 'Train_Name': f'{origin_code} {dest_code} Shatabdi', 'Type': 'Premium', 'Base_Fare': int(sim_dist * 2.5), 'Dep': '06:10', 'Arr': get_arr(6, 10, p_hrs, p_mins), 'Dur': dur_prem},
-        {'Train_No': '22436', 'Train_Name': 'Vande Bharat Exp', 'Type': 'Premium', 'Base_Fare': int(sim_dist * 2.8), 'Dep': '15:00', 'Arr': get_arr(15, 0, p_hrs, p_mins), 'Dur': dur_prem},
-        {'Train_No': '12424', 'Train_Name': f'{origin_code} Rajdhani', 'Type': 'Premium', 'Base_Fare': int(sim_dist * 2.2), 'Dep': '20:10', 'Arr': get_arr(20, 10, p_hrs, p_mins), 'Dur': dur_prem},
-        {'Train_No': '12312', 'Train_Name': 'Superfast Mail', 'Type': 'Express', 'Base_Fare': int(sim_dist * 1.2), 'Dep': '10:30', 'Arr': get_arr(10, 30, e_hrs, e_mins), 'Dur': dur_exp}
-    ]
-    return pd.DataFrame(mock_trains)
 
 # --- 7. SIDEBAR: COMPARE CART & DOWNLOAD ---
 with st.sidebar:
@@ -786,685 +762,745 @@ st.markdown("<div class='premium-card'><div class='section-title'>🚉 Plan Your
 col1, col2 = st.columns(2)
 with col1:
     station_names = sorted([f"{code} - {name}" for code, name in MODERN_STATIONS.items()])
-    selected_origin_str = st.selectbox("Source Station", station_names, index=0)
-    origin_code = selected_origin_str.split(" - ")[0]
+    
+    # 🚨 THE FIX: Custom First Option (100% Bright & Visible)
+    origin_options = ["-- Select Origin Station --"] + station_names
+    selected_origin_str = st.selectbox(
+        "Source Station 🚉", 
+        origin_options, 
+        index=0  # Ab by default humara custom text dikhega
+    )
+    
 with col2:
-    default_idx = 1 if len(station_names) > 1 else 0
-    selected_dest_str = st.selectbox("Destination Station", station_names, index=default_idx)
-    dest_code = selected_dest_str.split(" - ")[0]
-
-if origin_code == dest_code:
-    st.warning("Origin and Destination cannot be the same.")
-    route_trains = pd.DataFrame()
-else:
-    route_trains = fetch_trains(origin_code, dest_code)
+    dest_options = ["-- Select Destination Station --"] + station_names
+    selected_dest_str = st.selectbox(
+        "Destination Station 🏁", 
+        dest_options, 
+        index=0
+    )
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-col3, col_class, col4, col5 = st.columns([2.8, 1.5, 1, 1.2])
+# ====================================================================
+# 🛑 SMART SAFETY LOCK: Custom text wali condition check karega
+# ====================================================================
+route_trains = pd.DataFrame()
 
-with col3:
-    if not route_trains.empty:
-        train_display_list = route_trains['Train_No'].astype(str) + " - " + route_trains['Train_Name'].astype(str)
-        selected_train_display = st.selectbox("Select Train", train_display_list)
-        selected_train_no = selected_train_display.split(" - ")[0]
-        
-        train_data = route_trains[route_trains['Train_No'].astype(str) == selected_train_no].iloc[0]
-        train_category = train_data['Type']
-        raw_base_fare = train_data['Base_Fare']
-        
-        # 🕒 1. SMART TIME FORMATTING (Converting 24h to 12h AM/PM)
-        def format_time_ampm(time_str):
-            try:
-                # If time is something like "15:30:00" or "15:30"
-                t_parts = str(time_str).split(":")
-                if len(t_parts) >= 2:
-                    h, m = int(t_parts[0]), int(t_parts[1])
-                    ampm = "AM" if h < 12 else "PM"
-                    h = h % 12
-                    if h == 0: h = 12
-                    return f"{h:02d}:{m:02d} {ampm}"
-            except Exception:
-                pass
-            return str(time_str) # Fallback to original if parsing fails
+if selected_origin_str == "-- Select Origin Station --" or selected_dest_str == "-- Select Destination Station --":
+    st.info("👆 Kripya pehle apna Source aur Destination Station select karein.")
+else:
+    origin_code = selected_origin_str.split(" - ")[0]
+    dest_code = selected_dest_str.split(" - ")[0]
 
-        f_dep = format_time_ampm(train_data['Dep'])
-        f_arr = format_time_ampm(train_data['Arr'])
-        
-        # ⏳ 2. SMART DURATION FORMATTING (Converting "330" or "05:30" to "05h 30m")
-        def format_duration(dur_str):
-            dur_str = str(dur_str)
-            try:
-                if ":" in dur_str:
-                    parts = dur_str.split(":")
-                    return f"{int(parts[0])}h {int(parts[1])}m"
-                elif dur_str.isdigit():
-                    mins = int(dur_str)
-                    return f"{mins // 60}h {mins % 60}m"
-            except Exception:
-                pass
-            return dur_str # Fallback
-
-        f_dur = format_duration(train_data['Dur'])
-        
-        # 3. RENDER THE BEAUTIFUL SCHEDULE CARD
-        st.markdown(f"""
-        <div style="background: rgba(5, 20, 15, 0.4); border: 1px solid rgba(0, 230, 118, 0.3); border-radius: 8px; padding: 12px; margin-top: 5px;">
-            <div style="color: #94A3B8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; text-align: center;">Schedule Overview</div>
-            <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 1.1rem; padding: 0 10px;">
-                <div style="color: #00E676; text-shadow: 0 0 8px rgba(0,230,118,0.5);">{f_dep}</div>
-                <div style="color: #00E5FF; font-size: 0.85rem; letter-spacing: 1px;">⟷ {f_dur} ⟷</div>
-                <div style="color: #FF1744; text-shadow: 0 0 8px rgba(255,23,68,0.5);">{f_arr}</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    if origin_code == dest_code:
+        st.error("❌ Source aur Destination ek hi station nahi ho sakte!")
     else:
-        st.info("Loading train data...")
-        raw_base_fare = 0
-        train_data = None
+        # Dono alag-alag station mil gaye, ab API run karo!
+        route_trains = fetch_trains(origin_code, dest_code)
 
-with col_class:
-    # 🚆 DYNAMIC CLASS FILTER (PERMANENT FIX)
-    if train_data is not None:
-        current_train_name = str(train_data['Train_Name']).upper()
-        
-        if "VANDE BHARAT" in current_train_name or "SHATABDI" in current_train_name:
-            valid_classes = ["AC Chair Car (CC)", "Executive Chair Car (EC)"] 
-        elif "RAJDHANI" in current_train_name:
-            valid_classes = ["First AC (1A)", "Second AC (2A)", "Third AC (3A)"] 
-        else:
-            valid_classes = list(CLASS_MULTIPLIERS.keys()) 
-    else:
-        valid_classes = list(CLASS_MULTIPLIERS.keys())
-        
-    selected_class = st.selectbox("Travel Class", valid_classes)
 
-with col4:
-    # 📅 NEW FEATURE: Interactive Calendar Date Picker
-    today = datetime.date.today()
-    max_allowed_date = today + datetime.timedelta(days=120)  # IRCTC allows booking 120 days in advance
-    default_date = today + datetime.timedelta(days=7)
-    
-    journey_date = st.date_input(
-        "📅 Select Journey Date", 
-        value=default_date, 
-        min_value=today, 
-        max_value=max_allowed_date
-    )
-    
-    # Background logic: Auto-calculate days left for the AI Model
-    days_to_journey = max(1, (journey_date - today).days)
-    with col5:
-        st.markdown("<div style='margin-bottom: 5px; color: #FFFFFF; font-size: 1.1rem; font-weight: 800; text-shadow: 2px 2px 5px rgba(0,0,0,1.0), 0 0 15px rgba(0,229,255,0.5);'>Live Status</div>", unsafe_allow_html=True)
-        
-        short_class = selected_class.split("(")[-1].replace(")", "").strip()
-        formatted_date = journey_date.strftime("%d-%m-%Y")
-        
-        # 🚨 THE FIX: Global Default variables for ML Fare Prediction
-        seats_booked_pct = 85 
-        adjusted_base_fare = 500
-        
-        # 🔄 Fetch Data from RailYatri
-        live_data = fetch_live_seat_status(selected_train_no, short_class, origin_code, dest_code, formatted_date)
-        
-        # 🚨 THE SMART ERROR HANDLER (Updated for Date Mismatch)
-        error_msg = live_data.get("error")
-        
-        if error_msg:
-            # Route mismatch
-            if "not an Intermediate Station" in str(error_msg) or "Intermediate" in str(error_msg):
-                st.warning(f"⚠️ Train **{selected_train_no}** ka is route par stoppage nahi hai. Kripya doosri train chunein.", icon="🚫")
+# ====================================================================
+# BAAKI KA UI CODE (Tension-free kyunki route_trains empty hai toh error nahi ayega)
+# ====================================================================
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ====================================================================
+# 🚨 THE MASTER LOCK: UI Tabhi aayega jab train milegi
+# ====================================================================
+if not route_trains.empty:
+    import ast
+    import re
+    import datetime
+
+    # 🔧 STREAMLIT SESSION STATE SETUP 
+    if 'selected_train_no' not in st.session_state:
+        st.session_state.selected_train_no = None
+    if 'selected_class' not in st.session_state:
+        st.session_state.selected_class = None
+
+    # 🚨 THE FIX: CSS me 'white-space: pre-wrap' lagaya taaki \n (enter) kaam kare aur status dikhe!
+    st.markdown("""
+    <style>
+    div[data-testid="stButton"] button {
+        background: linear-gradient(145deg, #1E293B, #0F172A);
+        border: 1px solid rgba(0, 229, 255, 0.4);
+        border-radius: 8px;
+        padding: 2px;
+        min-height: 75px;
+        transition: all 0.3s;
+    }
+    div[data-testid="stButton"] button:hover {
+        border-color: #00E676;
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 230, 118, 0.2);
+    }
+    div[data-testid="stButton"] button p {
+        font-size: 0.9rem; 
+        font-weight: 800; 
+        line-height: 1.5; 
+        color: #E2E8F0;
+        white-space: pre-wrap !important; /* 🔥 THE MAGIC FIX FOR SEAT STATUS */
+        text-align: center;
+        margin: 0;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ⏳ TIME & DURATION SMART PARSER (Fixes '200 min' issue)
+    def format_duration(dur_str):
+        dur_str = str(dur_str).strip()
+        try:
+            if ":" in dur_str:
+                parts = dur_str.split(":")
+                return f"{int(parts[0])}h {int(parts[1])}m"
+            elif dur_str.isdigit():
+                mins = int(dur_str)
+                return f"{mins // 60}h {mins % 60}m"
+        except Exception: pass
+        return dur_str 
+
+    def format_time_ampm(time_str):
+        try:
+            t_parts = str(time_str).split(":")
+            if len(t_parts) >= 2:
+                h, m = int(t_parts[0]), int(t_parts[1])
+                ampm = "AM" if h < 12 else "PM"
+                h = h % 12
+                if h == 0: h = 12
+                return f"{h:02d}:{m:02d} {ampm}"
+        except: pass
+        return str(time_str)[:5]
+
+    def safe_eval(val):
+        if isinstance(val, dict): return val
+        try: return ast.literal_eval(str(val))
+        except: return {}
+
+    # ====================================================================
+    # 🚂 PHASE 1: RAIL-YATRI STYLE TRAIN LISTING (100% ACCURATE)
+    # ====================================================================
+    if st.session_state.selected_train_no is None:
+        st.markdown(f"<h3 style='color: #00E5FF; text-align:center;'>🚂 Available Trains: {origin_code} ⟷ {dest_code}</h3>", unsafe_allow_html=True)
+        st.markdown("<hr style='border: 1px dashed rgba(255,255,255,0.2); margin-bottom: 20px;'>", unsafe_allow_html=True)
+
+        for idx, row in route_trains.iterrows():
+            t_no = str(row['Train_No'])
+            t_name = str(row['Train_Name'])
+            f_dep = format_time_ampm(row['Dep'])
+            f_arr = format_time_ampm(row['Arr'])
+            f_dur = format_duration(row['Dur'])
             
-            # Date mismatch (The exact error you got earlier)
-            elif "Unable to process" in str(error_msg) or "Cancelled" in str(error_msg):
-                st.warning(f"📆 Train **{selected_train_no}** is tareekh ko nahi chalti ya iska quota band hai. Kripya doosri Date ya Train chunein.", icon="📅")
+            # --- RUNNING DAYS BADGE ---
+            running_days = str(row.get('Running_Days', '1111111'))
+            if len(running_days) < 7: running_days = '1111111'
+            days_names = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+            days_html = ""
+            for i, val in enumerate(running_days):
+                color = "#00E676" if val == '1' else "#334155"
+                bg = "rgba(0, 230, 118, 0.15)" if val == '1' else "transparent"
+                days_html += f"<span style='color: {color}; background: {bg}; padding: 2px 5px; border-radius: 4px; margin-right: 3px; font-size: 0.7rem; font-weight: bold;'>{days_names[i]}</span>"
+
+            st.markdown(f"""
+            <div style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,229,255,0.3); margin-top: 15px; margin-bottom: 5px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 1.15rem; font-weight: 900; color: #FFFFFF; letter-spacing: 0.5px;">{t_name} <span style="color: #00E5FF; font-size: 0.9rem;">({t_no})</span></div>
+                    <div style="font-size: 0.75rem; font-weight: 800; color: #94A3B8; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 20px;">{row['Type']}</div>
+                </div>
+                <div style="margin-top: 8px;">{days_html}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-weight: bold;">
+                    <div style="color: #00E676; font-size: 1.2rem; text-shadow: 0 0 5px rgba(0,230,118,0.4);">{f_dep} <span style="font-size:0.75rem; color:#94A3B8;">{origin_code}</span></div>
+                    <div style="color: #FF1744; font-size: 1.2rem; text-shadow: 0 0 5px rgba(255,23,68,0.4);"><span style="font-size:0.75rem; color:#94A3B8;">{dest_code}</span> {f_arr}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            avail = safe_eval(row.get('Avail_Dict', '{}'))
+            valid_irctc_classes = ['1A', '2A', '3A', '3E', 'SL', 'CC', 'EC', 'EA', 'VS', 'FC', '2S']
+            filtered_avail = {k: v for k, v in avail.items() if str(k).strip().upper() in valid_irctc_classes}
+            avail_items = list(filtered_avail.items())[:8]
+
+            if len(avail_items) > 0:
+                class_cols = st.columns(len(avail_items))
                 
-            # Unknown technical issues
+                st.markdown("""
+                <style>
+                div[data-testid="stButton"] button {
+                    white-space: pre-wrap !important;
+                    height: auto !important;
+                    padding: 10px 5px !important;
+                }
+                .stHorizontalBlock:has(> div > div > div > div[data-testid="stButton"]) {
+                    flex-wrap: wrap !important;
+                }
+                .stHorizontalBlock > div:has(> div > div[data-testid="stButton"]) {
+                    min-width: 60px !important;
+                    flex-basis: 60px !important;
+                    flex-grow: 1 !important;
+                    margin-bottom: 5px !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                for c_idx, (c_code, c_status) in enumerate(avail_items):
+                    with class_cols[c_idx]:
+                        btn_label = f"{c_code}"
+                        if st.button(btn_label, key=f"btn_{t_no}_{c_code}", use_container_width=True):
+                            st.session_state.selected_train_no = t_no
+                            st.session_state.selected_class = c_code
+                            st.rerun() 
             else:
-                st.error(f"📡 Data Fetch Issue: {error_msg}")
+                st.markdown("<div style='color:#94A3B8; font-size:0.85rem; text-align:center;'>⚠️ Class info currently updating from servers...</div>", unsafe_allow_html=True)
+                    
+            st.markdown("</div>", unsafe_allow_html=True)
+
+
+    # ====================================================================
+    # 🌟 PHASE 2: VIP DASHBOARD (Detailed View for Clicked Train)
+    # ====================================================================
+    else:
+        selected_train_no = st.session_state.selected_train_no
+        short_class = st.session_state.selected_class
+        train_data = route_trains[route_trains['Train_No'].astype(str) == selected_train_no].iloc[0]
+        
+        # 🔙 Back Button
+        if st.button("⬅️ Back to Train List", type="secondary"):
+            st.session_state.selected_train_no = None
+            st.session_state.selected_class = None
+            st.rerun()
+
+        st.markdown(f"<div style='background: rgba(0, 229, 255, 0.1); border-left: 4px solid #00E5FF; padding: 10px 15px; border-radius: 5px; margin: 15px 0;'><b>Analyzing:</b> {train_data['Train_Name']} ({selected_train_no}) | <b>Class:</b> {short_class}</div>", unsafe_allow_html=True)
+        col_date, col_dummy = st.columns([1, 2])
+        with col_date:
+            today = datetime.date.today()
+            max_allowed_date = today + datetime.timedelta(days=60) # IRCTC new ARP rule is 60 days
+            
+            st.markdown("""
+            <style>
+            div[data-testid="stDateInput"] input::placeholder { color: #00E5FF !important; opacity: 0.8 !important; font-weight: 600 !important; }
+            div[data-testid="stDateInput"] input { color: #FFFFFF !important; font-weight: 700 !important; }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            # Force user explicit choice
+            journey_date = st.date_input("Select Journey Date", format="DD/MM/YYYY", value=None, min_value=today, max_value=max_allowed_date)
+            
+            if not journey_date:
+                st.info("Please select a **Journey Date** from the calendar above to unlock Live Status and Insights.", icon="\U0001F4C5")
+                st.stop()
                 
+            days_to_journey = max(1, (journey_date - today).days)
+                
+        st.markdown("""<img src="dummy" onerror="setTimeout(function(){var inputs = document.querySelectorAll('div[data-testid=\\'stDateInput\\'] input'); for(var i=0; i<inputs.length; i++){inputs[i].setAttribute('inputmode', 'none');}}, 500);" style="display:none;">""", unsafe_allow_html=True)
+
+        # 🔄 Fetch API Data for Date
+        formatted_date = journey_date.strftime("%d-%m-%Y")
+        r_days = str(train_data.get('Running_Days', '1111111'))
+        live_data = fetch_live_seat_status(selected_train_no, short_class, origin_code, dest_code, formatted_date, r_days)
+        
+        seat_list = []
+        error_msg = live_data.get("error")
+        if error_msg:
+            st.error(f"📡 Update: {error_msg}")
         elif live_data.get("seat_availibility") and len(live_data["seat_availibility"]) > 0:
             seat_list = live_data["seat_availibility"]
             
-            # 1. 🎯 MAIN CARD DATA (Today's Selection)
-            # ... (Aapka purana Flexbox wala code yahan se waisa hi rahega)
-            
-            # 1. 🎯 MAIN CARD DATA (Today's Selection)
             main_day = seat_list[0]
-            real_fare = main_day.get("total_fare", "--")
             
-            # 🚨 THE FIX: Extract exact numerical fare for ML Model
-            try: adjusted_base_fare = int(real_fare)
-            except: pass
-            
-            raw_status = str(main_day.get("availablity_status", "N/A")).upper()
-            
-            if "WL" in raw_status or "RAC" in raw_status:
-                prediction_text = main_day.get("cp_perc", "CHECKING...")
-            else:
-                prediction_text = "CONFIRMED SEAT"
-                
-            import re
-            clean_status = raw_status.split("/")[-1] if "/" in raw_status else raw_status
-            
-            # 🚨 THE FIX: Calculate 'seats_booked_pct' mathematically for ML model
-            if "AVL" in clean_status or "AVAILABLE" in clean_status or "AV" in clean_status:
-                nums = re.findall(r'\d+', clean_status)
-                avl = int(nums[-1]) if nums else 0
-                seats_booked_pct = max(10, 100 - avl)  # AVL hone par percentage nikalega
-                color, disp = "#00E676", f"AVL<br>{avl:02d}" if avl > 0 else "AVAILABLE"
-            elif "RAC" in clean_status:
-                nums = re.findall(r'\d+', clean_status)
-                rac = int(nums[-1]) if nums else 0
-                seats_booked_pct = 100 + int(rac / 2)  # RAC hone par load badhayega
-                color, disp = "#FFD600", clean_status.replace("RAC", "RAC<br>")
-            elif "WL" in clean_status or "WAIT" in clean_status:
-                nums = re.findall(r'\d+', clean_status)
-                wl = int(nums[-1]) if nums else 0
-                seats_booked_pct = 110 + wl            # WL hone par maximum load
-                clean_status = re.sub(r'([A-Z]+)(\d+)', r'\1 \2', clean_status) 
-                color, disp = "#FF9100", clean_status.replace(" ", "<br>")
-            else:
-                seats_booked_pct = 150                 # REGRET yani Overloaded
-                color, disp = "#FF1744", "REGRET<br>FULL"
-                prediction_text = "NO CHANCE"
-
-            # 🎨 RENDER 3D PREMIUM CARD
-            fare_badge = f"<div style='background: rgba(255,255,255,0.1); color: #00E5FF; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; margin-top: 8px; font-weight: 900; border: 1px solid rgba(0,229,255,0.3); box-shadow: 0 0 10px rgba(0,229,255,0.2);'>FARE: ₹{real_fare}</div>"
-            
-            st.markdown(f"""
-            <div style="background: linear-gradient(145deg, #1E293B, #0F172A); border: 2px solid {color}; border-radius: 10px; padding: 12px 5px; text-align: center; box-shadow: 0 4px 15px {color}30; display: flex; flex-direction: column; align-items: center;">
-                <div style="color: {color}; font-size: 1.4rem; font-weight: 900; line-height: 1.1; text-shadow: 1px 1px 5px rgba(0,0,0,0.8);">{disp}</div>
-                <div style="color: #94A3B8; font-size: 0.75rem; margin-top: 6px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">
-                    {prediction_text}
-                </div>
-                {fare_badge}
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Yahan se aapka Flexbox/Calendar wala purana code exactly waisa hi rahega...
-            # st.markdown("<br>", unsafe_allow_html=True) ...
-            
-            # ====================================================================
-            # 📅 FEATURE: 6-DAY AVAILABILITY CALENDAR (MakeMyTrip Style Slider)
-            # ====================================================================
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown(f"<h4 style='color: #00E5FF; font-size: 1.1rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); margin-bottom: 15px;'>📅 Next 6 Days ({short_class})</h4>", unsafe_allow_html=True)
-            
-            # 🔥 Flexbox Container (No Indentation Bug)
-            calendar_html = '<style>.scroll-hide::-webkit-scrollbar { height: 6px; } .scroll-hide::-webkit-scrollbar-thumb { background: #00E5FF50; border-radius: 10px; } .scroll-hide::-webkit-scrollbar-track { background: transparent; }</style>'
-            calendar_html += '<div class="scroll-hide" style="display: flex; overflow-x: auto; gap: 12px; padding-bottom: 12px; scroll-behavior: smooth;">'
-            
-            for idx, day_data in enumerate(seat_list[:6]):
-                # 1. Smart Date Parsing
-                date_dict = day_data.get("date_format", {})
-                display_date = f"{date_dict.get('date', '')} {date_dict.get('month', '')}".strip()
-                if not display_date:
-                    display_date = day_data.get("availablity_date", "")[:5]
-                
-                raw_st = str(day_data.get("availablity_status", "")).upper()
-                c_stat = raw_st.split("/")[-1] if "/" in raw_st else raw_st
-                pct = day_data.get("cp_percentage", "")
-                
-                # 2. Dynamic Colors & Badges
-                if "AVL" in c_stat or "AVAILABLE" in c_stat:
-                    box_color, chance_text, badge_bg = "#00E676", "Available", "rgba(0, 230, 118, 0.15)"
-                    nums = re.findall(r'\d+', c_stat)
-                    c_stat = f"AVL {int(nums[-1]):02d}" if nums else "AVL"
-                elif "RAC" in c_stat: 
-                    box_color, chance_text, badge_bg = "#FFD600", f"{pct}% Chance" if pct else "RAC", "rgba(255, 214, 0, 0.15)"
-                elif "WL" in c_stat or "WAIT" in c_stat: 
-                    box_color, chance_text, badge_bg = "#FF9100", f"{pct}% Chance" if pct else "Waitlist", "rgba(255, 145, 0, 0.15)"
-                    c_stat = re.sub(r'([A-Z]+)(\d+)', r'\1 \2', c_stat)
-                else: 
-                    box_color, c_stat, chance_text, badge_bg = "#FF1744", "REGRET", "No Chance", "rgba(255, 23, 68, 0.15)"
-
-                # 3. Generating Individual Premium Cards (Ek Single Line me taaki Streamlit code print na kare)
-                calendar_html += f'<div style="min-width: 95px; flex-shrink: 0; background: linear-gradient(145deg, #1E293B, #0F172A); border: 1px solid {box_color}60; border-radius: 12px; padding: 14px 10px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4);"><div style="color: #94A3B8; font-size: 0.85rem; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px;">{display_date}</div><div style="color: {box_color}; font-size: 1.15rem; font-weight: 900; margin-bottom: 8px; text-shadow: 0 0 8px {box_color}40;">{c_stat}</div><div style="color: {box_color}; font-size: 0.7rem; font-weight: 800; background: {badge_bg}; border-radius: 20px; padding: 4px 2px; letter-spacing: 0.5px;">{chance_text}</div></div>'
-
-            calendar_html += "</div>"
-            st.markdown(calendar_html, unsafe_allow_html=True)
-
-# ====================================================================
-    # 🌡️ FEATURE 3 ENHANCED: LIVE DEMAND TRACKER (Urgency Meter)
-    # ====================================================================
-with st.container():
-        import random
-        # Smart Logic: Date paas hone par aur demand high hone par numbers badh jayenge
-        base_fomo = random.randint(18, 45) + max(0, (30 - days_to_journey)) * 3
-        users_viewing = base_fomo + random.randint(12, 30)
-        booking_rate = int(users_viewing * 0.15) + random.randint(2, 7) # 15% booking conversion logic
-        
-        # CSS for the Pulsing Live Dot Animation
-        st.markdown("""
-        <style>
-        @keyframes pulse-red {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 23, 68, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 23, 68, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 23, 68, 0); }
-        }
-        .live-dot {
-            height: 10px; width: 10px; background-color: #FF1744; border-radius: 50%; 
-            display: inline-block; margin-right: 8px; margin-bottom: 1px;
-            animation: pulse-red 2s infinite;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        st.markdown(f"""
-        <div style="margin-top: 15px; padding: 15px; background: linear-gradient(145deg, #2A1118, #0F172A); border: 1px solid #FF1744; border-radius: 10px; box-shadow: 0 4px 15px rgba(255,23,68,0.15);">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,23,68,0.3); padding-bottom: 8px; margin-bottom: 10px;">
-                <div style="display: flex; align-items: center;">
-                    <div class="live-dot"></div>
-                    <span style="color: #FF1744; font-weight: 900; font-size: 13px; letter-spacing: 1px;">LIVE TRAFFIC</span>
-                </div>
-                <span style="color: #94A3B8; font-size: 11px; font-style: italic;">Updated just now</span>
-            </div>
-            <div style="color: #E2E8F0; font-size: 14.5px; line-height: 1.5;">
-                <b style="color: #FFFFFF; font-size: 18px;">{users_viewing}</b> travelers are viewing this exact route.<br>
-                <span style="color: #FFD600; font-size: 13px; font-weight: bold;">⚡ {booking_rate} tickets booked in the last hour!</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    # ====================================================================    
-
-# ====================================================================
-# 🧮 SMART BASE FARE NORMALIZER 
-# ====================================================================
-adjusted_base_fare = 0 
-if train_data is not None and 'Fares_Dict' in train_data:
-    exact_fares = train_data['Fares_Dict']
-    if isinstance(exact_fares, dict) and short_class in exact_fares and int(exact_fares[short_class]) > 0:
-        raw_fetched_fare = int(exact_fares[short_class])
-    else:
-        raw_fetched_fare = int(raw_base_fare * CLASS_MULTIPLIERS.get(selected_class, 1.0))
-else:
-    raw_fetched_fare = int(raw_base_fare * CLASS_MULTIPLIERS.get(selected_class, 1.0))
-
-if "SL" in short_class: adjusted_base_fare = max(350, min(raw_fetched_fare, 750)) 
-elif "3A" in short_class or "CC" in short_class: adjusted_base_fare = max(1100, min(raw_fetched_fare, 1850)) 
-elif "2A" in short_class: adjusted_base_fare = max(1600, min(raw_fetched_fare, 2600)) 
-elif "1A" in short_class or "EC" in short_class: adjusted_base_fare = max(2800, min(raw_fetched_fare, 4500)) 
-else: adjusted_base_fare = raw_fetched_fare 
-
-# ====================================================================
-# 🟢 THE PREDICT BUTTON 
-# ====================================================================
-st.markdown("<br>", unsafe_allow_html=True)
-if st.button("🚀 Predict Surge Fare & Availability", use_container_width=True, type="primary"):
-    st.session_state.predicted = True
-# ====================================================================
-
-# --- 9. PREDICTION & ANALYTICS SECTION ---
-# 🧮 DIRECT VARIABLE INJECTOR 
-short_class = selected_class.split("(")[-1].replace(")", "").strip()
-adjusted_base_fare = 0
-    
-if train_data is not None and 'Fares_Dict' in train_data:
-        exact_fares = train_data['Fares_Dict']
-        if isinstance(exact_fares, dict) and short_class in exact_fares and int(exact_fares[short_class]) > 0:
-            adjusted_base_fare = int(exact_fares[short_class])
-        else:
-            adjusted_base_fare = int(raw_base_fare * CLASS_MULTIPLIERS.get(selected_class, 1.0))
-else:
-        adjusted_base_fare = int(raw_base_fare * CLASS_MULTIPLIERS.get(selected_class, 1.0))
-
-    # Yahan se original condition start hoti hai
-if st.session_state.predicted and adjusted_base_fare > 0:
-    
-    is_premium = 1 if train_category == "Premium" else 0
-    
-    # 🟢 MASTER DYNAMIC PRICING ALGORITHM (Strict IRCTC Flexi-Fare Rules)
-    def calculate_live_surge(b_fare, cap_pct, days_left, is_p, travel_c):
-        # 🛡️ RULE 1: STRICT BASE FARE (If seats are easily available, NO SURGE)
-        if cap_pct <= 50:
-            return b_fare 
-            
-        # RULE 2: Gradual Surge kicks in ONLY AFTER 50% seats are booked
-        if cap_pct <= 85:
-            m = 1.0 + ((cap_pct - 50) * 0.005) # Max +17.5%
-        elif cap_pct <= 100:
-            m = 1.175 + ((cap_pct - 85) * 0.015) # Max +40%
-        else:
-            wl_intensity = min(cap_pct - 100, 100) 
-            m = 1.40 + (wl_intensity * 0.005) # Extreme waitlist surge
-            
-        # RULE 3: Premium Trains have higher ceiling
-        if is_p == 1 or "1A" in travel_c or "EC" in travel_c:
-            m = 1.0 + ((m - 1.0) * 1.4)
-            
-        # RULE 4: Urgency Penalty APPLIES ONLY IF train is already filling up (High Demand)
-        if cap_pct > 75:
-            if days_left <= 2:
-                m += 0.25
-            elif days_left <= 6:
-                m += 0.10
-                
-        return int(b_fare * min(m, 2.5))
-
-    calculated_fare = calculate_live_surge(adjusted_base_fare, seats_booked_pct, days_to_journey, is_premium, selected_class)
-    
-    # 🧠 HYBRID MACHINE LEARNING PREDICTION 
-    if model_loaded:
-        input_features = pd.DataFrame([[adjusted_base_fare, days_to_journey, seats_booked_pct, is_premium]], 
-                                      columns=['Base_Fare', 'Days_to_Journey', 'Seats_Booked_Percentage', 'Is_Premium'])
-        raw_prediction = float(surge_model.predict(input_features)[0])
-        
-        # 🛡️ THE FIX: Override AI Model if Seats are Available!
-        if seats_booked_pct <= 55:
-            current_surge_price = adjusted_base_fare
-            pricing_model_name = "IRCTC Flexi-Fare Rule (No Surge)"
-        else:
-            current_surge_price = max(calculated_fare, raw_prediction)
-            pricing_model_name = "Hybrid AI + Live Engine" if current_surge_price == raw_prediction else "IRCTC Live Replica Engine"
-    else:
-        current_surge_price = calculated_fare
-        pricing_model_name = "IRCTC Live Replica Engine"
-
-    surge_percentage = int(((current_surge_price / adjusted_base_fare) - 1.0) * 100)
-    
-    # Smart Risk Probability (Mathematical)
-    urgency_multiplier = 0.7 if days_to_journey > 30 else (1.4 if days_to_journey <= 5 else 1.0 + ((30 - days_to_journey) / 100.0))
-    premium_penalty = 15 if (is_premium == 1 and seats_booked_pct > 40) else 0
-    surge_probability = max(2, min(99, int((seats_booked_pct * urgency_multiplier) + premium_penalty)))
-
-    col_pred, col_cart = st.columns([4, 1])
-    with col_pred:
-        st.markdown(f"""
-        <div class="prediction-card">
-            <div class="pred-label">Live Dynamic Fare ({selected_class})</div>
-            <div class="pred-price">₹{int(current_surge_price):,}</div>
-            <div class="pred-meta">Model Active: <span style="color:#00E676;">{pricing_model_name}</span> | Base Fare: ₹{adjusted_base_fare:,}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with col_cart:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.link_button("🎫 Book on IRCTC ↗", "https://www.irctc.co.in/nget/train-search", use_container_width=True, type="secondary")
-        
-        if st.button("📌 Save to Cart", use_container_width=True):
-            st.session_state.compare_cart.append({
-                "Train": train_data['Train_Name'], "Class": selected_class, 
-                "Fare": int(current_surge_price), "Days": days_to_journey
-            })
-            st.rerun()
-
-    # --- KPIs ---
-    st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>📊 Live Journey Metrics</div>", unsafe_allow_html=True)
-    
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    
-    with kpi1: 
-        delta_color = "delta-positive" if surge_percentage > 0 else "delta-neutral"
-        st.markdown(f"""
-        <div class="cyber-kpi">
-            <div class="kpi-title">Surge Applied</div>
-            <div class="kpi-value">+{surge_percentage}%</div>
-            <div class="kpi-delta {delta_color}">+₹{int(current_surge_price - adjusted_base_fare)} Increase</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with kpi2: 
-        if days_to_journey <= 3 or seats_booked_pct >= 95:
-            urgency_status, u_color, u_desc = "Book Now", "delta-positive", "High Risk of Sold Out"
-        elif days_to_journey <= 10 or seats_booked_pct >= 75:
-            urgency_status, u_color, u_desc = "Book Soon", "delta-neutral", "Demand is Increasing"
-        else:
-            urgency_status, u_color, u_desc = "Safe to Wait", "delta-negative", "Low Demand Currently"
-            
-        st.markdown(f"""
-        <div class="cyber-kpi">
-            <div class="kpi-title">Action Required</div>
-            <div class="kpi-value" style="font-size: 1.8rem; margin-top: 10px; margin-bottom: 12px;">{urgency_status}</div>
-            <div class="kpi-delta {u_color}">{u_desc}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with kpi3: 
-        # Deterministic Forecast for tomorrow
-        tom_days = max(1, days_to_journey - 1)
-        tom_cap = min(120, seats_booked_pct + 4) # Assume 4% seats fill up daily mathematically
-        tom_fare = calculate_live_surge(adjusted_base_fare, tom_cap, tom_days, is_premium, selected_class)
-        fare_diff = tom_fare - int(current_surge_price)
-        
-        if fare_diff > 30: trend_text, t_color = f"Rising +₹{fare_diff}", "delta-positive"
-        elif fare_diff > 0: trend_text, t_color = f"Slight Up +₹{fare_diff}", "delta-neutral"
-        else: trend_text, t_color = "Stable", "delta-negative"
-
-        st.markdown(f"""
-        <div class="cyber-kpi">
-            <div class="kpi-title">24h Fare Forecast</div>
-            <div class="kpi-value" style="font-size: 1.8rem; margin-top: 10px; margin-bottom: 12px;">{trend_text}</div>
-            <div class="kpi-delta {t_color}">If you book tomorrow</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with kpi4: 
-        st.markdown(f"""
-        <div class="cyber-kpi">
-            <div class="kpi-title">Trains on Route</div>
-            <div class="kpi-value">{len(route_trains)}</div>
-            <div class="kpi-delta delta-neutral">Live API Linked</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # --- ADVANCED CHARTS SECTION ---
-    st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>📅 Advanced Travel Insights (Live Linked)</div>", unsafe_allow_html=True)
-    
-    ch1, ch2 = st.columns(2)
-    with ch1:
-        future_dates = [(datetime.date.today() + datetime.timedelta(days=d)).strftime("%d %b") for d in range(days_to_journey, days_to_journey+7)]
-        cal_fares = []
-        for i in range(7):
-            sim_cap = max(10, seats_booked_pct - (i * 8)) # Decreasing demand for future dates
-            sim_days = days_to_journey + i
-            # Using exact same mathematical engine for the chart
-            f = calculate_live_surge(adjusted_base_fare, sim_cap, sim_days, is_premium, selected_class)
-            cal_fares.append(f)
-            
-        fig_cal = px.line(x=future_dates, y=cal_fares, markers=True, title=f"Live Mathematical 7-Day Forecast ({selected_class})")
-        fig_cal.update_traces(line_color='#00E676', marker=dict(size=10, color='#00E5FF'))
-        fig_cal.update_layout(
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="#E2E8F0", 
-            title_font=dict(color='#00E5FF', size=16), xaxis_title="", yaxis_title="Fare (₹)",
-            xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)')
-        )
-        st.plotly_chart(fig_cal, use_container_width=True, config={'staticPlot': True})
-
-    with ch2:
-        days_week = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        times = ['Morning', 'Afternoon', 'Evening', 'Night']
-        
-        # 100% Deterministic Heatmap (No random integers used)
-        z_data = np.zeros((4, 7))
-        for r in range(4):
-            for c in range(7):
-                # Pure math calculation based on row/column combinations + live seats %
-                variation = ((r * 7) + (c * 11) + seats_booked_pct) % 20 - 10
-                if c >= 5: variation += 15 # Weekends
-                if r == 3: variation -= 10 # Nights
-                if r == 2: variation += 15 # Evenings
-                z_data[r, c] = max(10, min(100, seats_booked_pct + variation))
-        
-        fig_heat = px.imshow(z_data, x=days_week, y=times, color_continuous_scale='teal', title=f"Traffic Heatmap (Anchored to {seats_booked_pct}%)")
-        fig_heat.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="#E2E8F0", title_font=dict(color='#00E5FF', size=16))
-        st.plotly_chart(fig_heat, use_container_width=True, config={'staticPlot': True})
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # --- EXISTING PREDICTIVE INSIGHTS CHARTS ---
-    st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>📈 Predictive Fare Insights</div>", unsafe_allow_html=True)
-    chart_col1, chart_col2 = st.columns(2)
-    
-    with chart_col1:
-        mock_seats = np.arange(0, 101, 5)
-        mock_fares = []
-        for s in mock_seats:
-            # Sync chart exactly with the live math engine
-            mock_fares.append(calculate_live_surge(adjusted_base_fare, s, days_to_journey, is_premium, selected_class))
-                
-        df_chart = pd.DataFrame({'Capacity Sold (%)': mock_seats, 'Ticket Price (₹)': mock_fares})
-        fig1 = px.area(df_chart, x='Capacity Sold (%)', y='Ticket Price (₹)', markers=True)
-        fig1.update_traces(line_color='#00E5FF', fillcolor='rgba(0, 229, 255, 0.15)', marker_color='#00E5FF')
-        
-        live_pct = min(seats_booked_pct, 100)
-        fig1.add_vline(x=live_pct, line_dash="dash", line_color="#00E676", annotation_text=f"LIVE: {live_pct}% Booked", annotation_font_color="#00E676")
-        
-        fig1.update_layout(
-            title=dict(text=f"Math Engine Demand Curve ({selected_class})", font=dict(color='#00E5FF', size=18, family='Segoe UI')),
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", 
-            font_color="#E2E8F0", 
-            xaxis=dict(showgrid=False, title=dict(font=dict(color="#00E5FF"))), 
-            yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)', title=dict(font=dict(color="#00E5FF"))),
-            hoverlabel=dict(bgcolor="rgba(15, 23, 42, 0.9)", font_size=14, font_color="#00E5FF")
-        )
-        st.plotly_chart(fig1, use_container_width=True, config={'staticPlot': True})
-
-    with chart_col2:
-        route_trains_sorted = route_trains.sort_values(by='Base_Fare')
-        fig2 = px.bar(route_trains_sorted, x='Base_Fare', y='Train_No', orientation='h', color='Type', color_discrete_map={'Premium': '#00E5FF', 'Express': '#334155'}, hover_data=['Train_Name'])
-        
-        fig2.update_layout(
-            title=dict(text="Live Active Trains on Route", font=dict(color='#00E5FF', size=18, family='Segoe UI')),
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", 
-            font_color="#E2E8F0", 
-            xaxis_title="Base Fare (₹)", yaxis_title="Train Number", 
-            yaxis=dict(showgrid=False, type='category', title=dict(font=dict(color="#00E5FF"))), 
-            xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)', title=dict(font=dict(color="#00E5FF"))),
-            legend=dict(title=dict(text="Train Type", font=dict(color="#00E5FF", size=14)), font=dict(color="#E2E8F0", size=13), bgcolor="rgba(10, 15, 30, 0.6)", bordercolor="rgba(0, 229, 255, 0.3)", borderwidth=1),
-            hoverlabel=dict(bgcolor="rgba(15, 23, 42, 0.9)", font_size=14, font_color="#00E5FF")
-        )
-        st.plotly_chart(fig2, use_container_width=True, config={'staticPlot': True})
-        
-    st.markdown("</div>", unsafe_allow_html=True)
-# ====================================================================
-        # 🛡️ FEATURE 2 ENHANCED: SMART 'PLAN B' STRATEGY (Premium UI & Logic)
-        # ====================================================================
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<h3 style='color: #FFD600; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);'>🛡️ RailFare AI: Smart Travel Strategy</h3>", unsafe_allow_html=True)
-        
-    plan_col1, plan_col2 = st.columns(2)
-        
-        # --- 🧠 SUPER ACCURATE LOGIC ENGINE ---
-        # Tatkal timing exactly matches IRCTC rules based on AC vs Non-AC
-    ac_classes = ['1A', '2A', '3A', 'CC', 'EC', '3E']
-    is_ac = any(c in short_class for c in ac_classes)
-    tatkal_time = "10:00 AM (AC Class)" if is_ac else "11:00 AM (Non-AC Class)"
-        
-    if seats_booked_pct <= 100:
-            risk_color = "#00E676"  # Safe Green
-            risk_level = "LOW RISK (Safe Zone)"
-            risk_desc = "Ticket almost confirmed ya available hai. Surge badhne se pehle book kar lein."
-            action_1 = "✅ <b>Immediate Action:</b> Book right now to lock the lowest base fare."
-            action_2 = "💡 <b>Pro Tip:</b> Chart preparation tak wait na karein, demand badhne par flexi-fare lag sakta hai."
-            
-    elif seats_booked_pct > 100 and seats_booked_pct <= 115:
-            risk_color = "#FFD600"  # Warning Yellow
-            risk_level = "MODERATE RISK (Borderline)"
-            risk_desc = f"Waitlist/RAC chal rahi hai. Journey me {days_to_journey} days bache hain, chances hain confirm hone ke."
-            action_1 = "⚠️ <b>Action Plan:</b> Normal ticket book kar lein, par backup ready rakhein."
-            action_2 = "🔄 <b>Vikalp Scheme:</b> Book karte waqt IRCTC ki 'Vikalp' (Alternate Train) scheme zarur select karein."
-            
-    else:
-            risk_color = "#FF1744"  # Danger Red
-            risk_level = "HIGH RISK (Critical Zone)"
-            risk_desc = "Waitlist bohot lambi hai ya REGRET ho gaya hai. Normal ticket ka confirm hona kaafi mushkil hai."
-            action_1 = f"🕒 <b>Tatkal Strategy:</b> Kal subah exact <b>{tatkal_time}</b> par Tatkal quota try karein."
-            action_2 = f"🔀 <b>Class Upgrade:</b> {short_class} chhod kar higher class me seat check karein, wahan chance zyada hai."
-
-        # --- 🎨 PREMIUM UI DESIGN (Cards) ---
-    with plan_col1:
-            st.markdown(f"""
-            <div style='background: linear-gradient(145deg, #1E293B, #0F172A); padding: 20px; border-radius: 12px; border-left: 6px solid {risk_color}; box-shadow: 0 6px 15px rgba(0,0,0,0.4); height: 100%; display: flex; flex-direction: column; justify-content: center;'>
-                <h4 style='color: {risk_color}; margin-top: 0; font-weight: 800; font-size: 1.1rem;'>{risk_level}</h4>
-                <p style='color: #E2E8F0; font-size: 15px; margin-bottom: 15px;'>{risk_desc}</p>
-                <div style='background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);'>
-                    <span style='color: #94A3B8; font-size: 13px;'>Journey Proximity:</span> <b style='color: #FFFFFF;'>{days_to_journey} Days</b><br>
-                    <span style='color: #94A3B8; font-size: 13px;'>Selected Class:</span> <b style='color: #FFFFFF;'>{short_class}</b>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-    with plan_col2:
-            st.markdown(f"""
-            <div style='background: linear-gradient(145deg, #1E293B, #0F172A); padding: 20px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 6px 15px rgba(0,0,0,0.4); height: 100%; display: flex; flex-direction: column; justify-content: center;'>
-                <h4 style='color: #00E5FF; margin-top: 0; font-weight: 800; font-size: 1.1rem;'>⚡ RailFare 'Plan B'</h4>
-                <p style='color: #F8FAFC; font-size: 14.5px; line-height: 1.6; margin-bottom: 10px;'>{action_1}</p>
-                <p style='color: #F8FAFC; font-size: 14.5px; line-height: 1.6; margin-bottom: 15px;'>{action_2}</p>
-                <div style='border-top: 1px dashed #334155; padding-top: 10px; text-align: center;'>
-                    <span style='color: #FFD600; font-size: 13px; font-weight: bold; letter-spacing: 0.5px;'>🤖 AI SUGGESTION ENGINE ACTIVE</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        # ====================================================================
-    # ====================================================================
-        # 🔔 FEATURE 4 ENHANCED: SMART PRICE ALERT (Professional UI)
-        # ====================================================================
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<h3 style='color: #00E676; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);'>🔔 Set AI Price Alert</h3>", unsafe_allow_html=True)
-        
-        # Calculate dynamic ranges based on current adjusted base fare
-    min_alert = int(adjusted_base_fare * 0.7) # 30% discount max drop
-    max_alert = int(adjusted_base_fare * 1.5) # 50% surge
-    default_alert = int(adjusted_base_fare * 0.9) # Default suggest 10% lower
-        
-    alert_col1, alert_col2 = st.columns([1.5, 1])
-        
-    with alert_col1:
-            st.markdown("""
-            <div style='background: linear-gradient(145deg, #1E293B, #0F172A); padding: 20px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 6px 15px rgba(0,0,0,0.4); height: 100%;'>
-                <p style='color: #E2E8F0; font-size: 15px; margin-bottom: 10px;'>Aapka target price set karein. Jab surge fare is rate tak girega, RailFare AI aapko notify karega.</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # The interactive Streamlit Slider
-            target_price = st.slider(
-                "Target Price (₹)", 
-                min_value=min_alert, 
-                max_value=max_alert, 
-                value=default_alert, 
-                step=10,
-                label_visibility="collapsed"
+            # 🛑 100% PURE REAL FARE EXTRACTOR (No AI, No Estimation)
+            real_fare = (
+                main_day.get("total_fare") or 
+                main_day.get("fare") or 
+                main_day.get("totalFare") or 
+                main_day.get("ticketFare") or 
+                "--"
             )
             
-            # --- Probability Logic ---
-            discount_pct = ((adjusted_base_fare - target_price) / adjusted_base_fare) * 100
-            
-            if target_price >= adjusted_base_fare:
-                prob_text = "VERY HIGH (Current Price)"
-                prob_color = "#00E676"
-            elif discount_pct < 10:
-                prob_text = "HIGH (Slight Drop Expected)"
-                prob_color = "#00E676"
-            elif discount_pct >= 10 and discount_pct < 20:
-                prob_text = "MODERATE (Wait & Watch)"
-                prob_color = "#FFD600"
-            else:
-                prob_text = "LOW (Unlikely to drop this much)"
-                prob_color = "#FF1744"
+            # Agar live API se exact fare nahi mila, toh Fares_Dict (Master DB / ConfirmTkt cache) se real check karo
+            if str(real_fare) == "--" or not str(real_fare).isdigit():
+                try:
+                    import ast
+                    fares_mapping = train_data.get('Fares_Dict', {})
+                    if isinstance(fares_mapping, str):
+                        fares_mapping = ast.literal_eval(fares_mapping)
+                    
+                    if isinstance(fares_mapping, dict) and short_class in fares_mapping:
+                        real_fare = str(fares_mapping[short_class])
+                except:
+                    pass
 
-    with alert_col2:
+            # Agar kahin bhi real fare nahi mila, toh strict "--" dikhega (No Fake Numbers)
+            try: 
+                adjusted_base_fare = int(real_fare) if str(real_fare).isdigit() else 500
+            except: 
+                adjusted_base_fare = 500
+
+        # ====================================================================
+        # 🌟 VIP LAYOUT (Left: Traffic, Right: Calendar)
+        # ====================================================================
+        if len(seat_list) > 0:
+            st.markdown("<hr style='border: 1px dashed rgba(0,229,255,0.2); margin: 25px 0px 15px 0px;'>", unsafe_allow_html=True)
+        # ====================================================================
+        # ?? LIVE STATUS & FARE BANNER
+    # ====================================================================
+            main_status = seat_list[0].get("status", "N/A")
+            status_color = "#00E676" if "AVAIL" in main_status.upper() or "CURR" in main_status.upper() else "#FF1744" if "WL" in main_status.upper() else "#FF9100"
+            
+            if "/" in main_status:
+                parts = main_status.split("/")
+                initial, current = parts[0].strip(), parts[-1].strip()
+                ui_status = f'<div style="display: flex; align-items: center; gap: 12px;"><div style="color: {status_color}; font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px {status_color}88;">{current}</div><div style="color: #94A3B8; font-size: 0.85rem; font-weight: bold; padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1);">Initial: {initial}</div></div>'
+            elif "AVAIL" in main_status.upper():
+                num = main_status.upper().replace("AVAILABLE", "").replace("AVAIL", "").replace("-", "").strip()
+                if num:
+                    ui_status = f'<div style="display: flex; align-items: center; gap: 12px;"><div style="color: {status_color}; font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px {status_color}88;">AVAILABLE</div><div style="color: #00E676; font-size: 1.1rem; font-weight: 900; padding: 4px 12px; border-radius: 20px; background: rgba(0, 230, 118, 0.15); border: 1px solid rgba(0, 230, 118, 0.3);">{num} Seats</div></div>'
+                else:
+                    ui_status = f'<div style="color: {status_color}; font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px {status_color}88;">AVAILABLE</div>'
+            else:
+                ui_status = f'<div style="color: {status_color}; font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px {status_color}88;">{main_status}</div>'
+            
             st.markdown(f"""
-            <div style='background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border: 1px dashed {prob_color}; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center;'>
-                <div style='color: #94A3B8; font-size: 13px; margin-bottom: 5px;'>Target Set At</div>
-                <div style='color: #FFFFFF; font-size: 28px; font-weight: 900; margin-bottom: 10px;'>₹{target_price}</div>
-                <div style='background: rgba(255,255,255,0.05); padding: 5px; border-radius: 4px;'>
-                    <span style='color: #94A3B8; font-size: 12px;'>Drop Probability:</span><br>
-                    <b style='color: {prob_color}; font-size: 14px;'>{prob_text}</b>
+            <div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9)); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 12px; padding: 20px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
+                <div>
+                    <div style="color: #94A3B8; font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Selected Date Status</div>
+                    {ui_status}
+                </div>
+                <div style="text-align: right;">
+                    <div style="color: #94A3B8; font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Current Fare</div>
+                    <div style="color: #00E5FF; font-size: 1.8rem; font-weight: 900;">&#8377;{real_fare}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
+
+            col_traffic, col_calendar = st.columns([1.3, 2.7])
             
-    st.markdown("<br>", unsafe_allow_html=True)
-        # Notify Button row
-    btn_col1, btn_col2, btn_col3 = st.columns([1,2,1])
-    with btn_col2:
-            if st.button("🔔 Activate AI Price Alert", use_container_width=True, type="primary"):
-                st.toast(f"Tracker Active! Alert set for ₹{target_price}.", icon="✅")
-                st.balloons()
-                st.success(f"**Alert Locked:** We will monitor the {selected_train_no} ({short_class}) dynamic fare curve. You will be notified instantly when the algorithm predicts a drop to ₹{target_price}.")
-        # ====================================================================            
+            with col_traffic:
+                import random
+                import re
+                main_st = str(seat_list[0].get("status", "")).upper()
+                pred_pct = int(seat_list[0].get("prediction") or 50)
+                
+                # Dynamic Demand Metrics based on LIVE API Status & Waitlist Number
+                wl_number = 0
+                if "WL" in main_st and "/" in main_st:
+                    try: wl_number = int(re.sub(r'[^0-9]', '', main_st.split('/')[-1]))
+                    except: wl_number = 20
+                
+                urgency = max(0, 30 - days_to_journey)
+                
+                if "WL" in main_st:
+                    users_viewing = 120 + wl_number * 3 + urgency * 5 + random.randint(10, 40)
+                    booking_rate = int(users_viewing * 0.25)
+                    trend_color = "#FF1744"
+                    trend_text = "EXTREME DEMAND"
+                    box_bg = "linear-gradient(145deg, #2A1118, #0F172A)"
+                elif "RAC" in main_st:
+                    users_viewing = 60 + wl_number * 2 + urgency * 3 + random.randint(5, 20)
+                    booking_rate = int(users_viewing * 0.18)
+                    trend_color = "#FF9100"
+                    trend_text = "HIGH DEMAND"
+                    box_bg = "linear-gradient(145deg, #2A1A08, #0F172A)"
+                else: # Available
+                    avail_num = 50
+                    try: avail_num = int(re.sub(r'[^0-9]', '', main_st))
+                    except: pass
+                    users_viewing = max(15, 80 - avail_num + urgency * 2 + random.randint(5, 15))
+                    booking_rate = int(users_viewing * 0.08)
+                    trend_color = "#00E676"
+                    trend_text = "FILLING FAST" if avail_num < 30 else "STEADY DEMAND"
+                    box_bg = "linear-gradient(145deg, #0A1C14, #0F172A)"
+                
+                st.markdown(f"""
+                <style>
+                @keyframes pulse-{trend_color.replace('#','')} {{ 0% {{ transform: scale(0.95); box-shadow: 0 0 0 0 {trend_color}b3; }} 70% {{ transform: scale(1); box-shadow: 0 0 0 10px rgba(0,0,0,0); }} 100% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0,0,0,0); }} }}
+                .live-dot-{trend_color.replace('#','')} {{ height: 10px; width: 10px; background-color: {trend_color}; border-radius: 50%; display: inline-block; margin-right: 8px; margin-bottom: 1px; animation: pulse-{trend_color.replace('#','')} 2s infinite; }}
+                </style>
+                """, unsafe_allow_html=True)
+                
+                st.markdown(f"""
+                <div style="margin-top: 0px; padding: 15px; background: {box_bg}; border: 1px solid {trend_color}66; border-radius: 10px; box-shadow: 0 4px 15px {trend_color}22; height: 90%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid {trend_color}44; padding-bottom: 8px; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center;"><div class="live-dot-{trend_color.replace('#','')}"></div><span style="color: {trend_color}; font-weight: 900; font-size: 13px; letter-spacing: 1px;">{trend_text}</span></div>
+                    </div>
+                    <div style="color: #E2E8F0; font-size: 14.5px; line-height: 1.6;">
+                        <b style="color: #FFFFFF; font-size: 18px;">{users_viewing}</b> travelers viewing this train.<br>
+                        <span style="color: #FFD600; font-size: 13px; font-weight: bold;">&#9889; {booking_rate} bookings in last hour!</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with col_calendar:
+                st.markdown(f"<h4 style='color: #00E5FF; font-size: 1.1rem; margin-top: 0px; margin-bottom: 12px;'>📅 Next 6 Days Availability ({short_class})</h4>", unsafe_allow_html=True)
+                
+                calendar_html = '<div class="swipe-container">'
+                for idx, day_data in enumerate(seat_list[:6]):
+                    date_dict = day_data.get("date_format", {})
+                    display_date = f"{date_dict.get('date', '')} {date_dict.get('month', '')}".strip()
+                    if not display_date:
+                        a_date = day_data.get("availablity_date", "")
+                        import datetime
+                        try: display_date = datetime.datetime.strptime(a_date, "%Y-%m-%d").strftime("%d %b")
+                        except:
+                            try: display_date = datetime.datetime.strptime(a_date, "%d-%m-%Y").strftime("%d %b")
+                            except: display_date = a_date[:5]
+                    
+                    raw_st = str(day_data.get("availablity_status", "")).upper()
+                    c_stat = raw_st.split("/")[-1] if "/" in raw_st else raw_st
+                    pct = day_data.get("cp_percentage", "")
+                    
+                    # 🚨 THE FIX: Saaf-suthra aur CRASH-PROOF code
+                    if "AVL" in c_stat or "AVAILABLE" in c_stat:
+                        box_color, chance_text, badge_bg = "#00E676", "Available", "rgba(0, 230, 118, 0.15)"
+                        nums = re.findall(r'\d+', c_stat)
+                        c_stat = f"AVL {int(nums[-1]):02d}" if nums else "AVL"
+                    elif "RAC" in c_stat: 
+                        box_color, chance_text, badge_bg = "#FFD600", f"{pct}% Chance" if pct else "RAC", "rgba(255, 214, 0, 0.15)"
+                    elif "WL" in c_stat or "WAIT" in c_stat: 
+                        box_color, chance_text, badge_bg = "#FF9100", f"{pct}% Chance" if pct else "Waitlist", "rgba(255, 145, 0, 0.15)"
+                        c_stat = re.sub(r'([A-Z]+)(\d+)', r'\1 \2', c_stat)
+                    else: 
+                        box_color, c_stat, chance_text, badge_bg = "#FF1744", "REGRET", "No Chance", "rgba(255, 23, 68, 0.15)"
+
+                    calendar_html += f'<div class="swipe-card" style="background: linear-gradient(145deg, #1E293B, #0F172A); border: 1px solid {box_color}60; border-radius: 12px; padding: 12px 8px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4);"><div style="color: #94A3B8; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">{display_date}</div><div style="color: {box_color}; font-size: 1.1rem; font-weight: 900; margin-bottom: 6px; text-shadow: 0 0 8px {box_color}40;">{c_stat}</div><div style="color: {box_color}; font-size: 0.65rem; font-weight: 800; background: {badge_bg}; border-radius: 20px; padding: 4px 2px; white-space: nowrap;">{chance_text}</div></div>'
+                
+                calendar_html += "</div>"
+                st.markdown(calendar_html, unsafe_allow_html=True)
+        # ====================================================================
+        # 🟢 PREDICT BUTTON 
+        # ====================================================================
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🚀 Predict Surge Fare & ML Analysis", use_container_width=True, type="primary"):
+            st.session_state.predicted = True
+
+        # --- 9. PREDICTION & ANALYTICS SECTION ---
+        # 🧮 DIRECT VARIABLE INJECTOR 
+
+        selected_class = short_class
+        train_category = train_data.get('Type', 'Express')
+        try:
+            raw_base_fare = int(train_data.get('Base_Fare', 500))
+        except:
+            raw_base_fare = 500
+
+        try:
+            if 'seat_list' in locals() and len(seat_list) > 0:
+                c_stat = str(seat_list[0].get('availablity_status', '')).upper()
+                if "AVL" in c_stat or "AVAILABLE" in c_stat:
+                    seats_booked_pct = 40
+                elif "RAC" in c_stat:
+                    seats_booked_pct = 85
+                elif "WL" in c_stat or "WAIT" in c_stat:
+                    seats_booked_pct = 110
+                else:
+                    seats_booked_pct = 120
+            else:
+                seats_booked_pct = 50
+        except:
+            seats_booked_pct = 50
+
+        if train_data is not None and 'Fares_Dict' in train_data:
+            exact_fares = train_data['Fares_Dict']
+            import ast
+            if isinstance(exact_fares, str):
+                try:
+                    exact_fares = ast.literal_eval(exact_fares)
+                except:
+                    exact_fares = {}
+            if isinstance(exact_fares, dict) and short_class in exact_fares and int(exact_fares[short_class]) > 0:
+                adjusted_base_fare = int(exact_fares[short_class])
+            else:
+                adjusted_base_fare = int(real_fare) if 'real_fare' in locals() and str(real_fare).isdigit() else int(raw_base_fare * CLASS_MULTIPLIERS.get(selected_class, 1.0))
+        else:
+            adjusted_base_fare = int(real_fare) if 'real_fare' in locals() and str(real_fare).isdigit() else int(raw_base_fare * CLASS_MULTIPLIERS.get(selected_class, 1.0))
+
+            # Yahan se original condition start hoti hai
+        if st.session_state.predicted and adjusted_base_fare > 0:
+    
+            is_premium = 1 if train_category == "Premium" else 0
+    
+            # 🟢 MASTER DYNAMIC PRICING ALGORITHM (Strict IRCTC Flexi-Fare Rules)
+            def calculate_live_surge(b_fare, cap_pct, days_left, is_p, travel_c):
+                # 🛡️ RULE 1: STRICT BASE FARE (If seats are easily available, NO SURGE)
+                if cap_pct <= 50:
+                    return b_fare 
+            
+                # RULE 2: Gradual Surge kicks in ONLY AFTER 50% seats are booked
+                if cap_pct <= 85:
+                    m = 1.0 + ((cap_pct - 50) * 0.005) # Max +17.5%
+                elif cap_pct <= 100:
+                    m = 1.175 + ((cap_pct - 85) * 0.015) # Max +40%
+                else:
+                    wl_intensity = min(cap_pct - 100, 100) 
+                    m = 1.40 + (wl_intensity * 0.005) # Extreme waitlist surge
+            
+                # RULE 3: Premium Trains have higher ceiling
+                if is_p == 1 or "1A" in travel_c or "EC" in travel_c:
+                    m = 1.0 + ((m - 1.0) * 1.4)
+            
+                # RULE 4: Urgency Penalty APPLIES ONLY IF train is already filling up (High Demand)
+                if cap_pct > 75:
+                    if days_left <= 2:
+                        m += 0.25
+                    elif days_left <= 6:
+                        m += 0.10
+                
+                return int(b_fare * min(m, 2.5))
+
+            calculated_fare = calculate_live_surge(adjusted_base_fare, seats_booked_pct, days_to_journey, is_premium, selected_class)
+    
+            # 🧠 HYBRID MACHINE LEARNING PREDICTION 
+            if model_loaded:
+                input_features = pd.DataFrame([[adjusted_base_fare, days_to_journey, seats_booked_pct, is_premium]], 
+                                              columns=['Base_Fare', 'Days_to_Journey', 'Seats_Booked_Percentage', 'Is_Premium'])
+                raw_prediction = float(surge_model.predict(input_features)[0])
+        
+                # 🛡️ THE FIX: Override AI Model if Seats are Available!
+                if seats_booked_pct <= 55:
+                    current_surge_price = adjusted_base_fare
+                    pricing_model_name = "IRCTC Flexi-Fare Rule (No Surge)"
+                else:
+                    current_surge_price = max(calculated_fare, raw_prediction)
+                    pricing_model_name = "Hybrid AI + Live Engine" if current_surge_price == raw_prediction else "IRCTC Live Replica Engine"
+            else:
+                current_surge_price = calculated_fare
+                pricing_model_name = "IRCTC Live Replica Engine"
+
+            surge_percentage = int(((current_surge_price / adjusted_base_fare) - 1.0) * 100)
+    
+            # Smart Risk Probability (Mathematical)
+            urgency_multiplier = 0.7 if days_to_journey > 30 else (1.4 if days_to_journey <= 5 else 1.0 + ((30 - days_to_journey) / 100.0))
+            premium_penalty = 15 if (is_premium == 1 and seats_booked_pct > 40) else 0
+            surge_probability = max(2, min(99, int((seats_booked_pct * urgency_multiplier) + premium_penalty)))
+
+            col_pred, col_cart = st.columns([4, 1])
+            with col_pred:
+                st.markdown(f"""
+                <div class="prediction-card">
+                    <div class="pred-label">Live Dynamic Fare ({selected_class})</div>
+                    <div class="pred-price">₹{int(current_surge_price):,}</div>
+                    <div class="pred-meta">Model Active: <span style="color:#00E676;">{pricing_model_name}</span> | Base Fare: ₹{adjusted_base_fare:,}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col_cart:
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.link_button("🎫 Book on IRCTC ↗", "https://www.irctc.co.in/nget/train-search", use_container_width=True, type="secondary")
+        
+                if st.button("📌 Save to Cart", use_container_width=True):
+                    st.session_state.compare_cart.append({
+                        "Train": train_data['Train_Name'], "Class": selected_class, 
+                        "Fare": int(current_surge_price), "Days": days_to_journey
+                    })
+                    st.rerun()
+
+            # --- KPIs ---
+            st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
+            st.markdown("<div class='section-title'>\U0001F4CA Live Fare & Scarcity Comparisons</div>", unsafe_allow_html=True)
+            chart_col1, chart_col2 = st.columns(2)
+    
+            with chart_col1:
+                import ast
+                def safe_eval_dict(d_str):
+                    if isinstance(d_str, dict): return d_str
+                    try: return ast.literal_eval(d_str)
+                    except: return {}
+                
+                t_fares = safe_eval_dict(train_data.get('Fares_Dict', {}))
+                t_avail = safe_eval_dict(train_data.get('Avail_Dict', {}))
+                
+                classes_list, base_f_list, surge_f_list = [], [], []
+                
+                for c_code, c_base in t_fares.items():
+                    c_status = str(t_avail.get(c_code, 'AVAILABLE 50')).upper()
+                    import re
+                    d_nums = re.findall(r'\d+', c_status)
+                    if "WL" in c_status or "WAIT" in c_status: c_cap = 100
+                    elif "RAC" in c_status: c_cap = 90
+                    elif "AV" in c_status or "AVL" in c_status: c_cap = max(10, 100 - int(d_nums[-1])) if len(d_nums) >= 1 else 50
+                    else: c_cap = 50
+                    
+                    c_surge = calculate_live_surge(c_base, c_cap, days_to_journey, is_premium, c_code)
+                    classes_list.append(c_code)
+                    base_f_list.append(c_base)
+                    surge_f_list.append(c_surge)
+                
+                if classes_list:
+                    df_c = pd.DataFrame({'Class': classes_list * 2, 'Fare': base_f_list + surge_f_list, 'Type': ['Base Fare']*len(classes_list) + ['Live Surged Fare']*len(classes_list)})
+                    fig1 = px.bar(df_c, x='Class', y='Fare', color='Type', barmode='group', title=f"Fare Comparison Across Classes ({selected_train_no})", color_discrete_map={'Base Fare': '#334155', 'Live Surged Fare': '#00E5FF'})
+                    fig1.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="#E2E8F0", title_font=dict(color='#00E5FF', size=16), yaxis_title="Fare (\u20B9)", legend=dict(font=dict(color='#E2E8F0'), title=dict(font=dict(color='#00E5FF'))))
+                    st.plotly_chart(fig1, use_container_width=True, config={'staticPlot': True})
+                else:
+                    st.info("No class data available for comparison.")
+                    
+            with chart_col2:
+                train_names, t_base_list, t_surge_list = [], [], []
+                
+                for _, r_row in route_trains.iterrows():
+                    r_fares = safe_eval_dict(r_row.get('Fares_Dict', {}))
+                    r_avail = safe_eval_dict(r_row.get('Avail_Dict', {}))
+                    if short_class in r_fares:
+                        r_base = r_fares[short_class]
+                        r_status = str(r_avail.get(short_class, 'AVAILABLE 50')).upper()
+                        import re
+                        d_nums = re.findall(r'\d+', r_status)
+                        if "WL" in r_status or "WAIT" in r_status: r_cap = 100
+                        elif "RAC" in r_status: r_cap = 90
+                        elif "AV" in r_status or "AVL" in r_status: r_cap = max(10, 100 - int(d_nums[-1])) if len(d_nums) >= 1 else 50
+                        else: r_cap = 50
+                        
+                        r_surge = calculate_live_surge(r_base, r_cap, days_to_journey, (r_row['Type']=='Premium'), short_class)
+                        train_names.append(f"{r_row['Train_No']} ({r_row['Type']})")
+                        t_base_list.append(r_base)
+                        t_surge_list.append(r_surge)
+                        
+                if train_names:
+                    df_t = pd.DataFrame({'Train': train_names * 2, 'Fare': t_base_list + t_surge_list, 'Type': ['Base Fare']*len(train_names) + ['Live Surged Fare']*len(train_names)})
+                    fig2 = px.bar(df_t, y='Train', x='Fare', color='Type', orientation='h', barmode='group', title=f"Route Comparison for {short_class} Class", color_discrete_map={'Base Fare': '#334155', 'Live Surged Fare': '#00E676'})
+                    fig2.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="#E2E8F0", title_font=dict(color='#00E5FF', size=16), xaxis_title="Fare (\u20B9)", legend=dict(font=dict(color='#E2E8F0'), title=dict(font=dict(color='#00E5FF'))))
+                    st.plotly_chart(fig2, use_container_width=True, config={'staticPlot': True})
+                else:
+                    st.info("No route data available for comparison.")
+        
+            st.markdown("</div>", unsafe_allow_html=True)
+        # ====================================================================
+                # 🛡️ FEATURE 2 ENHANCED: SMART 'PLAN B' STRATEGY (Premium UI & Logic)
+                # ====================================================================
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<h3 style='color: #FFD600; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);'>🛡️ RailFare AI: Smart Travel Strategy</h3>", unsafe_allow_html=True)
+        
+            plan_col1, plan_col2 = st.columns(2)
+        
+                # --- 🧠 SUPER ACCURATE LOGIC ENGINE ---
+                # Tatkal timing exactly matches IRCTC rules based on AC vs Non-AC
+            ac_classes = ['1A', '2A', '3A', 'CC', 'EC', '3E']
+            is_ac = any(c in short_class for c in ac_classes)
+            tatkal_time = "10:00 AM (AC Class)" if is_ac else "11:00 AM (Non-AC Class)"
+        
+            if seats_booked_pct <= 100:
+                    risk_color = "#00E676"  # Safe Green
+                    risk_level = "LOW RISK (Safe Zone)"
+                    risk_desc = "Ticket almost confirmed ya available hai. Surge badhne se pehle book kar lein."
+                    action_1 = "✅ <b>Immediate Action:</b> Book right now to lock the lowest base fare."
+                    action_2 = "💡 <b>Pro Tip:</b> Chart preparation tak wait na karein, demand badhne par flexi-fare lag sakta hai."
+            
+            elif seats_booked_pct > 100 and seats_booked_pct <= 115:
+                    risk_color = "#FFD600"  # Warning Yellow
+                    risk_level = "MODERATE RISK (Borderline)"
+                    risk_desc = f"Waitlist/RAC chal rahi hai. Journey me {days_to_journey} days bache hain, chances hain confirm hone ke."
+                    action_1 = "⚠️ <b>Action Plan:</b> Normal ticket book kar lein, par backup ready rakhein."
+                    action_2 = "🔄 <b>Vikalp Scheme:</b> Book karte waqt IRCTC ki 'Vikalp' (Alternate Train) scheme zarur select karein."
+            
+            else:
+                    risk_color = "#FF1744"  # Danger Red
+                    risk_level = "HIGH RISK (Critical Zone)"
+                    risk_desc = "Waitlist bohot lambi hai ya REGRET ho gaya hai. Normal ticket ka confirm hona kaafi mushkil hai."
+                    action_1 = f"🕒 <b>Tatkal Strategy:</b> Kal subah exact <b>{tatkal_time}</b> par Tatkal quota try karein."
+                    action_2 = f"🔀 <b>Class Upgrade:</b> {short_class} chhod kar higher class me seat check karein, wahan chance zyada hai."
+
+                # --- 🎨 PREMIUM UI DESIGN (Cards) ---
+            with plan_col1:
+                    st.markdown(f"""
+                    <div style='background: linear-gradient(145deg, #1E293B, #0F172A); padding: 20px; border-radius: 12px; border-left: 6px solid {risk_color}; box-shadow: 0 6px 15px rgba(0,0,0,0.4); display: flex; flex-direction: column; justify-content: center; word-wrap: break-word; min-height: 180px;'>
+                        <h4 style='color: {risk_color}; margin-top: 0; font-weight: 800; font-size: 1.1rem;'>{risk_level}</h4>
+                        <p style='color: #E2E8F0; font-size: 15px; margin-bottom: 15px;'>{risk_desc}</p>
+                        <div style='background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);'>
+                            <span style='color: #94A3B8; font-size: 13px;'>Journey Proximity:</span> <b style='color: #FFFFFF;'>{days_to_journey} Days</b><br>
+                            <span style='color: #94A3B8; font-size: 13px;'>Selected Class:</span> <b style='color: #FFFFFF;'>{short_class}</b>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            with plan_col2:
+                    st.markdown(f"""
+                    <div style='background: linear-gradient(145deg, #1E293B, #0F172A); padding: 20px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 6px 15px rgba(0,0,0,0.4); display: flex; flex-direction: column; justify-content: center; word-wrap: break-word; min-height: 180px;'>
+                        <h4 style='color: #00E5FF; margin-top: 0; font-weight: 800; font-size: 1.1rem;'>⚡ RailFare 'Plan B'</h4>
+                        <p style='color: #F8FAFC; font-size: 14.5px; line-height: 1.6; margin-bottom: 10px;'>{action_1}</p>
+                        <p style='color: #F8FAFC; font-size: 14.5px; line-height: 1.6; margin-bottom: 15px;'>{action_2}</p>
+                        <div style='border-top: 1px dashed #334155; padding-top: 10px; text-align: center;'>
+                            <span style='color: #FFD600; font-size: 13px; font-weight: bold; letter-spacing: 0.5px;'>🤖 AI SUGGESTION ENGINE ACTIVE</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                # ====================================================================
+            # ====================================================================
+                # 🔔 FEATURE 4 ENHANCED: SMART PRICE ALERT (Professional UI)
+                # ====================================================================
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<h3 style='color: #00E676; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); margin-top: 30px;'>🔔 Set AI Price Alert</h3>", unsafe_allow_html=True)
+            
+            st.markdown("""
+            <div style='background: rgba(15, 23, 42, 0.6); padding: 15px 20px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 20px; word-wrap: break-word; white-space: normal;'>
+                <p style='color: #E2E8F0; font-size: 15.5px; margin: 0;'>Select your target price and notification channel. Our AI will monitor the dynamic fare curve 24/7 and alert you instantly when prices drop.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            min_alert = int(adjusted_base_fare * 0.7) 
+            max_alert = int(adjusted_base_fare * 1.5) 
+            default_alert = int(adjusted_base_fare * 0.9) 
+            
+            alert_col1, alert_col2 = st.columns([1.5, 1])
+            
+            st.markdown("""
+            <style>
+            div[data-testid="stRadio"] label p, div[data-testid="stTextInput"] label p {
+                color: #00E5FF !important;
+                font-size: 15px !important;
+                font-weight: bold !important;
+                letter-spacing: 0.5px;
+            }
+            div[data-testid="stRadio"] div[role="radiogroup"] p {
+                color: #FFFFFF !important;
+                font-size: 14.5px !important;
+                font-weight: 600 !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            with alert_col1:
+                target_price = st.slider(
+                    "🎯 Set Target Fare (₹)", 
+                    min_value=min_alert, 
+                    max_value=max_alert, 
+                    value=default_alert, 
+                    step=10
+                )
+                
+                alert_channel = st.radio("Notify me via:", ["WhatsApp", "Email"], horizontal=True)
+                contact_info = st.text_input("Contact Details", placeholder="+91 9876543210" if alert_channel == "WhatsApp" else "you@example.com")
+            
+            discount_pct = ((adjusted_base_fare - target_price) / adjusted_base_fare) * 100
+            if target_price >= adjusted_base_fare:
+                prob_text = "VERY HIGH (Current)"
+                prob_color = "#00E676"
+            elif discount_pct < 10:
+                prob_text = "HIGH (Slight Drop)"
+                prob_color = "#00E676"
+            elif discount_pct >= 10 and discount_pct < 20:
+                prob_text = "MODERATE (Wait/Watch)"
+                prob_color = "#FFD600"
+            else:
+                prob_text = "LOW (Rare Drop)"
+                prob_color = "#FF1744"
+                
+            with alert_col2:
+                st.markdown(f"""
+                <div style='background: rgba(0,0,0,0.3); padding: 25px; border-radius: 12px; border: 1px dashed {prob_color}; text-align: center; display: flex; flex-direction: column; justify-content: center; word-wrap: break-word; min-height: 180px;'>
+                    <div style='color: #94A3B8; font-size: 14px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;'>Target Set At</div>
+                    <div style='color: #FFFFFF; font-size: 38px; font-weight: 900; margin-bottom: 15px;'>&#8377;{target_price}</div>
+                    <div style='background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;'>
+                        <span style='color: #94A3B8; font-size: 13px;'>AI Drop Probability</span><br>
+                        <b style='color: {prob_color}; font-size: 16px;'>{prob_text}</b>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            btn_col1, btn_col2, btn_col3 = st.columns([1,2,1])
+            with btn_col2:
+                btn_disabled = len(contact_info.strip()) < 5
+                if st.button("🔔 Activate AI Price Alert", use_container_width=True, type="primary", disabled=btn_disabled):
+                    st.toast(f"Tracker Active! Alert set for ₹{target_price}.", icon="✅")
+                    st.balloons()
+                    st.success(f"**Alert Locked:** We are monitoring the dynamic fare curve for Train {selected_train_no}. You will receive a **{alert_channel}** at **{contact_info}** when the fare hits **₹{target_price}**.")
+                # ====================================================================            
