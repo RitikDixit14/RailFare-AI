@@ -181,7 +181,7 @@ st.markdown("""
         scroll-behavior: smooth;
     }
     .swipe-container::-webkit-scrollbar { height: 6px; }
-    .swipe-container::-webkit-scrollbar-thumb { background: #00E5FF50; border-radius: 10px; }
+    .swipe-container::-webkit-scrollbar-thumb { background: var(--neon-cyan)50; border-radius: 10px; }
     
     .swipe-card {
         flex: 0 0 auto;
@@ -241,6 +241,97 @@ def fetch_real_availability_from_web(train_no, date_str, src, dst, travel_class)
         # DEBUG: st.write(f"Scraper Error: {e}")
         return None
 
+# --- THEME TOGGLE (Sidebar) ---
+st.sidebar.markdown("<h3 style='text-align: center; color: var(--text-main); margin-bottom: 0;'>🎨 Theme</h3>", unsafe_allow_html=True)
+theme_choice = st.sidebar.radio("ThemeChoice", ["🌙 Dark Mode", "☀️ Light Mode"], horizontal=True, label_visibility="collapsed")
+
+if theme_choice == "☀️ Light Mode":
+    css_vars = """
+    :root {
+        --bg-1: #FFFFFF;
+        --bg-2: #F8FAFC;
+        --bg-alpha-90: rgba(255, 255, 255, 0.9);
+        --bg-alpha-80: rgba(255, 255, 255, 0.8);
+        --bg-alpha-70: rgba(255, 255, 255, 0.7);
+        --bg-alpha-60: rgba(255, 255, 255, 0.6);
+        --bg-1-alpha-90: rgba(241, 245, 249, 0.9);
+        --bg-1-alpha-80: rgba(241, 245, 249, 0.8);
+        --bg-dark-95: rgba(255, 255, 255, 0.95);
+        --bg-dark-92: rgba(255, 255, 255, 0.92);
+        --bg-dark-82: rgba(255, 255, 255, 0.82);
+        --bg-dark-75: rgba(255, 255, 255, 0.75);
+        --bg-dark-60: rgba(255, 255, 255, 0.6);
+        --bg-greenish: rgba(240, 253, 244, 0.85);
+        
+        --neon-cyan: #0284C7;
+        --neon-green: #16A34A;
+        --neon-yellow: #CA8A04;
+        --neon-red: #DC2626;
+        --neon-orange: #EA580C;
+        
+        --text-light: #334155;
+        --text-muted: #64748B;
+        --border-light: #CBD5E1;
+        --text-inverted: #FFFFFF;
+        --text-main: #0F172A;
+        
+        --white-alpha-30: rgba(0, 0, 0, 0.15);
+        --white-alpha-20: rgba(0, 0, 0, 0.1);
+        --white-alpha-10: rgba(0, 0, 0, 0.05);
+        --white-alpha-05: rgba(0, 0, 0, 0.02);
+        
+        --black-alpha-80: rgba(255, 255, 255, 0.8);
+        --black-alpha-60: rgba(255, 255, 255, 0.6);
+        --black-alpha-50: rgba(255, 255, 255, 0.5);
+        --black-alpha-40: rgba(255, 255, 255, 0.4);
+        --black-alpha-30: rgba(255, 255, 255, 0.3);
+    }
+    """
+else:
+    css_vars = """
+    :root {
+        --bg-1: #1E293B;
+        --bg-2: #0F172A;
+        --bg-alpha-90: rgba(15, 23, 42, 0.9);
+        --bg-alpha-80: rgba(15, 23, 42, 0.8);
+        --bg-alpha-70: rgba(15, 23, 42, 0.7);
+        --bg-alpha-60: rgba(15, 23, 42, 0.6);
+        --bg-1-alpha-90: rgba(30, 41, 59, 0.9);
+        --bg-1-alpha-80: rgba(30, 41, 59, 0.8);
+        --bg-dark-95: rgba(7, 11, 20, 0.95);
+        --bg-dark-92: rgba(7, 11, 20, 0.92);
+        --bg-dark-82: rgba(7, 11, 20, 0.82);
+        --bg-dark-75: rgba(10, 15, 30, 0.75);
+        --bg-dark-60: rgba(10, 15, 30, 0.6);
+        --bg-greenish: rgba(5, 20, 15, 0.85);
+        
+        --neon-cyan: #00E5FF;
+        --neon-green: #00E676;
+        --neon-yellow: #FFD600;
+        --neon-red: #FF1744;
+        --neon-orange: #FF9100;
+        
+        --text-light: #E2E8F0;
+        --text-muted: #94A3B8;
+        --border-light: #334155;
+        --text-inverted: #070B14;
+        --text-main: #FFFFFF;
+        
+        --white-alpha-30: rgba(255,255,255,0.3);
+        --white-alpha-20: rgba(255,255,255,0.2);
+        --white-alpha-10: rgba(255,255,255,0.1);
+        --white-alpha-05: rgba(255,255,255,0.05);
+        
+        --black-alpha-80: rgba(0,0,0,0.8);
+        --black-alpha-60: rgba(0,0,0,0.6);
+        --black-alpha-50: rgba(0,0,0,0.5);
+        --black-alpha-40: rgba(0,0,0,0.4);
+        --black-alpha-30: rgba(0,0,0,0.3);
+    }
+    """
+
+st.markdown(f"<style>{css_vars}</style>", unsafe_allow_html=True)
+
 # --- 2. 3D GLOWING DARK THEME CSS INJECTION ---
 st.markdown("""
     <style>
@@ -248,100 +339,100 @@ st.markdown("""
         background-image: 
             radial-gradient(circle at 15% 50%, rgba(0, 229, 255, 0.15), transparent 40%),
             radial-gradient(circle at 85% 30%, rgba(0, 230, 118, 0.15), transparent 40%),
-            linear-gradient(rgba(7, 11, 20, 0.82), rgba(7, 11, 20, 0.92)),
+            linear-gradient(var(--bg-dark-82), var(--bg-dark-92)),
             url("https://images.unsplash.com/photo-1541427468627-a89a96e5ca1d?auto=format&fit=crop&w=2560&q=80");
         background-size: cover !important;
         background-position: center !important;
         background-attachment: fixed !important;
-        color: #E2E8F0; 
+        color: var(--text-light); 
         font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
     }
     
     .hero-header {
-        background: rgba(10, 15, 30, 0.75);
+        background: var(--bg-dark-75);
         backdrop-filter: blur(16px);
-        color: white;
+        color: var(--text-main);
         padding: 2.5rem 2rem;
         border-radius: 16px;
         text-align: center;
         position: relative;
         overflow: hidden;
-        border-top: 1px solid rgba(255, 255, 255, 0.2);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.8);
+        border-top: 1px solid var(--white-alpha-20);
+        border-bottom: 1px solid var(--black-alpha-80);
         border-left: 1px solid rgba(0, 229, 255, 0.3);
         border-right: 1px solid rgba(0, 229, 255, 0.3);
-        box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 25px rgba(0, 229, 255, 0.15);
+        box-shadow: 0 15px 35px var(--black-alpha-60), 0 0 25px rgba(0, 229, 255, 0.15);
         margin-bottom: 2.5rem;
     }
-    .hero-title { font-size: 3.2rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: 1px; color: #FFFFFF; text-shadow: 0 0 15px rgba(0, 229, 255, 0.5); }
-    .hero-subtitle { font-size: 1.2rem; font-weight: 400; color: #94A3B8; }
+    .hero-title { font-size: 3.2rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: 1px; color: var(--text-main); text-shadow: 0 0 15px rgba(0, 229, 255, 0.5); }
+    .hero-subtitle { font-size: 1.2rem; font-weight: 400; color: var(--text-muted); }
 
     .premium-card {
-        background: rgba(15, 23, 42, 0.7);
+        background: var(--bg-alpha-70);
         backdrop-filter: blur(12px);
         border-radius: 16px;
         padding: 25px;
         margin-bottom: 25px;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.8);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 229, 255, 0.05);
+        border-top: 1px solid var(--white-alpha-10);
+        border-bottom: 1px solid var(--black-alpha-80);
+        box-shadow: 0 10px 30px var(--black-alpha-50), 0 0 15px rgba(0, 229, 255, 0.05);
     }
     /* 🛠️ FIX FOR 'SAVE TO CART' BUTTON VISIBILITY */
     button[data-testid="baseButton-secondary"], button[kind="secondary"] { 
         background: rgba(0, 230, 118, 0.1) !important; 
-        border: 2px solid #00E676 !important; 
-        color: #00E676 !important; /* Bright Neon Green Text */
+        border: 2px solid var(--neon-green) !important; 
+        color: var(--neon-green) !important; /* Bright Neon Green Text */
         font-weight: 800 !important; 
         font-size: 1.1rem !important;
         border-radius: 8px !important;
         transition: 0.3s ease-in-out !important;
     }
     button[data-testid="baseButton-secondary"]:hover, button[kind="secondary"]:hover { 
-        background: #00E676 !important; 
-        color: #070B14 !important; /* Dark text on hover */
+        background: var(--neon-green) !important; 
+        color: var(--text-inverted) !important; /* Dark text on hover */
         box-shadow: 0 0 15px rgba(0, 230, 118, 0.6) !important;
     }
-    .section-title { color: #00E5FF; font-weight: 700; font-size: 1.4rem; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 229, 255, 0.2); padding-bottom: 10px; text-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
+    .section-title { color: var(--neon-cyan); font-weight: 700; font-size: 1.4rem; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 229, 255, 0.2); padding-bottom: 10px; text-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
     
     .prediction-card {
-        background: rgba(5, 20, 15, 0.85); backdrop-filter: blur(16px); border-radius: 16px; padding: 40px 25px;
+        background: var(--bg-greenish); backdrop-filter: blur(16px); border-radius: 16px; padding: 40px 25px;
         text-align: center; margin-bottom: 30px; animation: pulseGlow 2s infinite alternate;
-        border-left: 2px solid #00E676; border-right: 2px solid #00E676;
+        border-left: 2px solid var(--neon-green); border-right: 2px solid var(--neon-green);
     }
     @keyframes pulseGlow { 
-        from { box-shadow: 0 15px 40px rgba(0,0,0,0.6), 0 0 20px rgba(0, 230, 118, 0.2); } 
-        to { box-shadow: 0 15px 40px rgba(0,0,0,0.6), 0 0 40px rgba(0, 230, 118, 0.4); } 
+        from { box-shadow: 0 15px 40px var(--black-alpha-60), 0 0 20px rgba(0, 230, 118, 0.2); } 
+        to { box-shadow: 0 15px 40px var(--black-alpha-60), 0 0 40px rgba(0, 230, 118, 0.4); } 
     }
-    .pred-price { font-size: 4.5rem; color: #00E676; font-weight: 900; margin: 0; line-height: 1; text-shadow: 0 0 20px rgba(0, 230, 118, 0.6); }
-    .pred-label { color: #94A3B8; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 15px;}
-    .pred-meta { color: #E2E8F0; font-weight: 600; font-size: 1.1rem; margin-top: 20px;}
+    .pred-price { font-size: 4.5rem; color: var(--neon-green); font-weight: 900; margin: 0; line-height: 1; text-shadow: 0 0 20px rgba(0, 230, 118, 0.6); }
+    .pred-label { color: var(--text-muted); font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 15px;}
+    .pred-meta { color: var(--text-light); font-weight: 600; font-size: 1.1rem; margin-top: 20px;}
 
-    button[data-testid="baseButton-primary"] { background: linear-gradient(135deg, #00B4DB 0%, #0083B0 100%) !important; border: 1px solid rgba(255,255,255,0.3) !important; color: white !important; font-weight: 800 !important; font-size: 1.2rem !important; padding: 1.5rem !important; border-radius: 12px !important; box-shadow: 0 8px 20px rgba(0,0,0,0.4), 0 0 15px rgba(0, 229, 255, 0.4) !important;}
+    button[data-testid="baseButton-primary"] { background: linear-gradient(135deg, #00B4DB 0%, #0083B0 100%) !important; border: 1px solid var(--white-alpha-30) !important; color: var(--text-main) !important; font-weight: 800 !important; font-size: 1.2rem !important; padding: 1.5rem !important; border-radius: 12px !important; box-shadow: 0 8px 20px var(--black-alpha-40), 0 0 15px rgba(0, 229, 255, 0.4) !important;}
     
-    .cyber-kpi { background: rgba(10, 15, 30, 0.6); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 12px; padding: 20px 15px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.4); min-height: 165px; display: flex; flex-direction: column; justify-content: center;}
-    .kpi-title { color: #00E5FF; font-size: 1.05rem; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; }
-    .kpi-value { color: #FFFFFF; font-size: 2.5rem; font-weight: 900; line-height: 1.2; margin-bottom: 8px; }
-    .delta-positive { color: #FF1744; font-weight: 700;} 
-    .delta-negative { color: #00E676; font-weight: 700;} 
-    .delta-neutral { color: #94A3B8; font-weight: 700;}
-    .wl-glow { color: #FF9100 !important; text-shadow: 0 0 15px rgba(255, 145, 0, 0.6) !important; }
+    .cyber-kpi { background: var(--bg-dark-60); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 12px; padding: 20px 15px; text-align: center; box-shadow: 0 4px 15px var(--black-alpha-40); min-height: 165px; display: flex; flex-direction: column; justify-content: center;}
+    .kpi-title { color: var(--neon-cyan); font-size: 1.05rem; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; }
+    .kpi-value { color: var(--text-main); font-size: 2.5rem; font-weight: 900; line-height: 1.2; margin-bottom: 8px; }
+    .delta-positive { color: var(--neon-red); font-weight: 700;} 
+    .delta-negative { color: var(--neon-green); font-weight: 700;} 
+    .delta-neutral { color: var(--text-muted); font-weight: 700;}
+    .wl-glow { color: var(--neon-orange) !important; text-shadow: 0 0 15px rgba(255, 145, 0, 0.6) !important; }
 
-    [data-testid="stSidebar"] { background-color: rgba(7, 11, 20, 0.95) !important; border-right: 1px solid rgba(0, 229, 255, 0.2); }
+    [data-testid="stSidebar"] { background-color: var(--bg-dark-95) !important; border-right: 1px solid rgba(0, 229, 255, 0.2); }
     
     /* 🛠️ WIDGET LABELS VISIBILITY FIX */
     .stSelectbox label p, .stNumberInput label p, .stSlider label p, .stDateInput label p {
-        color: #FFFFFF !important; 
+        color: var(--text-main) !important; 
         font-size: 1.1rem !important; 
         font-weight: 800 !important; 
-        text-shadow: 2px 2px 5px rgba(0, 0, 0, 1.0), -1px -1px 4px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 229, 255, 0.5) !important;
+        text-shadow: 2px 2px 5px rgba(0, 0, 0, 1.0), -1px -1px 4px var(--black-alpha-80), 0 0 15px rgba(0, 229, 255, 0.5) !important;
         letter-spacing: 0.5px;
     }
-    div[data-baseweb="select"] > div, input { background-color: rgba(15, 23, 42, 0.8) !important; border-color: rgba(0, 229, 255, 0.3) !important; color: white !important;}
-    .stSlider > div > div > div > div { background-color: #00E5FF !important; box-shadow: 0 0 10px #00E5FF; }
+    div[data-baseweb="select"] > div, input { background-color: var(--bg-alpha-80) !important; border-color: rgba(0, 229, 255, 0.3) !important; color: var(--text-main) !important;}
+    .stSlider > div > div > div > div { background-color: var(--neon-cyan) !important; box-shadow: 0 0 10px var(--neon-cyan); }
     /* Smart Booking Button Style */
     a[data-testid="stLinkButton"] {
-        background: linear-gradient(135deg, #FF9100 0%, #FF3D00 100%) !important;
-        color: white !important;
+        background: linear-gradient(135deg, var(--neon-orange) 0%, #FF3D00 100%) !important;
+        color: var(--text-main) !important;
         font-weight: 800 !important;
         border: none !important;
         border-radius: 8px !important;
@@ -629,16 +720,16 @@ def fetch_trains(origin_code, dest_code):
 
 # --- 7. SIDEBAR: COMPARE CART & DOWNLOAD ---
 with st.sidebar:
-    st.markdown("<h2 style='color:#00E5FF; text-align:center;'>🛒 Saved Trains</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:var(--neon-cyan); text-align:center;'>🛒 Saved Trains</h2>", unsafe_allow_html=True)
     if not st.session_state.compare_cart:
         st.info("No trains added for comparison yet.")
     else:
         df_cart = pd.DataFrame(st.session_state.compare_cart)
         for idx, row in df_cart.iterrows():
             st.markdown(f"""
-            <div style='background:rgba(15,23,42,0.8); padding:10px; border-radius:5px; margin-bottom:10px; border-left:3px solid #00E5FF;'>
-                <b style='color:white;'>{row['Train']}</b> <span style='color:#94A3B8; font-size:0.8rem;'>({row['Class']})</span><br>
-                <span style='color:#00E676; font-size:1.1rem; font-weight:bold;'>₹{row['Fare']}</span>
+            <div style='background:var(--bg-alpha-80); padding:10px; border-radius:5px; margin-bottom:10px; border-left:3px solid var(--neon-cyan);'>
+                <b style='color: var(--text-main);'>{row['Train']}</b> <span style='color:var(--text-muted); font-size:0.8rem;'>({row['Class']})</span><br>
+                <span style='color:var(--neon-green); font-size:1.1rem; font-weight:bold;'>₹{row['Fare']}</span>
             </div>""", unsafe_allow_html=True)
             
         if st.button("🗑️ Clear Cart", use_container_width=True):
@@ -658,48 +749,80 @@ with st.sidebar:
     # 🎫 LIVE PNR STATUS SECTION (Sidebar)
     # ====================================================================
     st.sidebar.markdown("---")
-    st.sidebar.markdown("<h3 style='color: #FFD600; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);'>🎫 Live PNR Status</h3>", unsafe_allow_html=True)
+    st.sidebar.markdown("<h3 style='color: var(--neon-yellow); text-shadow: 1px 1px 2px var(--black-alpha-50);'>🎫 Live PNR Status</h3>", unsafe_allow_html=True)
     
     # 🛠️ CSS MAGIC: Zabardasti Box aur Text ko clear (High Contrast) banana
     st.sidebar.markdown("""
     <style>
     div[data-testid="stTextInput"] input {
-        color: #FFFFFF !important;
-        background-color: #1E293B !important;
-        border: 1px solid #00E5FF !important;
+        color: var(--text-main) !important;
+        background-color: var(--bg-1) !important;
+        border: 1px solid var(--neon-cyan) !important;
     }
     div[data-testid="stTextInput"] input::placeholder {
-        color: #94A3B8 !important;
+        color: var(--text-muted) !important;
         opacity: 1 !important;
     }
     </style>
     """, unsafe_allow_html=True)
     
     # 🌟 Custom High-Visibility Label (Margin fix kar diya gaya hai)
-    st.sidebar.markdown("<div style='color: #E2E8F0; font-size: 14px; font-weight: bold; margin-bottom: 5px;'>Enter 10-digit PNR Number:</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div style='color: var(--text-light); font-size: 14px; font-weight: bold; margin-bottom: 5px;'>Enter 10-digit PNR Number:</div>", unsafe_allow_html=True)
     
     # 📝 Input Box (Ab label aur box ke beech overlap nahi hoga)
     pnr_input = st.sidebar.text_input("Hidden_Label", label_visibility="collapsed", max_chars=10, placeholder="e.g. 1234567890")
     
     if st.sidebar.button("🔍 Check PNR", use_container_width=True):
         if len(pnr_input) == 10:
-            # 🌟 HIGH-CONTRAST PREMIUM RESULT BOX
-            st.sidebar.markdown(f"""
-            <div style="background-color: #1E293B; border: 2px solid #00E5FF; border-radius: 10px; padding: 15px; margin-top: 10px; box-shadow: 0px 4px 6px rgba(0,0,0,0.3);">
-                <div style="color: #00E5FF; font-size: 16px; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 5px;">
-                    PNR: {pnr_input}
-                </div>
-                <div style="color: #F8FAFC; font-size: 14.5px; line-height: 1.6;">
-                    <span style="color: #94A3B8;">Status:</span> <b style="color: #00E676; font-size: 16px;">CNF (Confirmed)</b><br>
-                    <span style="color: #94A3B8;">Coach/Berth:</span> <b style="color: #FFFFFF;">B4 | 42 (Upper)</b><br>
-                    <span style="color: #94A3B8;">Chart:</span> <b style="color: #FFD600;">Not Prepared</b>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            with st.sidebar.status("Fetching live status...", expanded=True) as pnr_status:
+                try:
+                    import requests
+                    pnr_url = f"https://api.confirmtkt.com/api/pnr/status/{pnr_input}"
+                    pnr_res = requests.get(pnr_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
+                    
+                    if pnr_res.status_code == 200:
+                        data = pnr_res.json()
+                        if data.get("Pnr") is None:
+                            pnr_status.update(label="Error", state="error")
+                            st.sidebar.error("⚠️ Flushed PNR / Invalid PNR.")
+                        else:
+                            pnr_status.update(label="Success", state="complete")
+                            
+                            train_name = data.get('TrainName', 'N/A')
+                            doj = data.get('Doj', 'N/A')
+                            chart = "Prepared" if data.get('ChartPrepared') else "Not Prepared"
+                            
+                            passengers_html = ""
+                            passengers = data.get('PassengerStatus', [])
+                            for p in passengers:
+                                status = p.get('CurrentStatus', 'N/A')
+                                color = "var(--neon-green)" if "CNF" in status or "RAC" in status else "var(--neon-yellow)"
+                                passengers_html += f"<div style='margin-bottom: 4px;'>Passenger {p.get('Number', '')}: <b style='color: {color};'>{status}</b></div>"
+                            
+                            st.sidebar.markdown(f"""
+                            <div style="background-color: var(--bg-1); border: 2px solid var(--neon-cyan); border-radius: 10px; padding: 15px; margin-top: 10px; box-shadow: 0px 4px 6px var(--black-alpha-30);">
+                                <div style="color: var(--neon-cyan); font-size: 16px; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid var(--border-light); padding-bottom: 5px;">
+                                    PNR: {pnr_input}
+                                </div>
+                                <div style="color: var(--text-main); font-size: 13.5px; line-height: 1.5;">
+                                    <div style="color: var(--text-muted); margin-bottom: 8px;">{train_name} | {doj}</div>
+                                    {passengers_html}
+                                    <div style="margin-top: 8px; border-top: 1px solid var(--border-light); padding-top: 5px;">
+                                        <span style="color: var(--text-muted);">Chart:</span> <b style="color: var(--neon-yellow);">{chart}</b>
+                                    </div>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    else:
+                        pnr_status.update(label="API Error", state="error")
+                        st.sidebar.error("⚠️ Server returned an error.")
+                except Exception as e:
+                    pnr_status.update(label="Network Error", state="error")
+                    st.sidebar.error(f"⚠️ Connection failed: {e}")
         else:
             # Clean error message
             st.sidebar.markdown("""
-            <div style="background-color: rgba(255,23,68,0.1); border-left: 4px solid #FF1744; padding: 10px; color: #FF1744; border-radius: 4px; margin-top: 10px;">
+            <div style="background-color: rgba(255,23,68,0.1); border-left: 4px solid var(--neon-red); padding: 10px; color: var(--neon-red); border-radius: 4px; margin-top: 10px;">
                 <b>Error:</b> Kripya sahi 10-digit PNR enter karein.
             </div>
             """, unsafe_allow_html=True)
@@ -708,43 +831,50 @@ with st.sidebar:
     # 🤖 RAILMATE AI ASSISTANT (Modern Google GenAI SDK)
     # ====================================================================
     st.sidebar.markdown("---")
-    st.sidebar.markdown("<h3 style='color: #00E5FF; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);'>🤖 RailMate AI Assistant</h3>", unsafe_allow_html=True)
-    st.sidebar.markdown("<div style='color: #E2E8F0; font-size: 14px; font-weight: bold; margin-bottom: 5px;'>Ask me anything about your journey:</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<h3 style='color: var(--neon-cyan); text-shadow: 1px 1px 2px var(--black-alpha-50);'>🤖 RailMate AI Assistant</h3>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div style='color: var(--text-light); font-size: 14px; font-weight: bold; margin-bottom: 5px;'>Ask me anything about your journey:</div>", unsafe_allow_html=True)
     
-    user_query = st.sidebar.text_input(
-        "Hidden_AI_Label", 
-        label_visibility="collapsed", 
-        placeholder="e.g., Which side of train avoids sun?"
-    )
-    
+    with st.sidebar.form(key='railmate_form'):
+        user_query = st.text_input(
+            "Hidden_AI_Label",
+            label_visibility="collapsed",
+            placeholder="e.g., Which side of train avoids sun?"
+        )
+        submit_btn = st.form_submit_button("Ask RailMate 🚀", use_container_width=True)
+
     # 🚨 API Key ab safely hidden secrets folder se fetch hogi
-    API_KEY = st.secrets["GEMINI_API"] 
-    
-    if user_query:
+    API_KEY = st.secrets["GEMINI_API"]
+
+    if submit_btn and user_query:
         with st.sidebar.status("RailMate is thinking...", expanded=True) as status:
             try:
-                from google import genai
+                import requests
                 
-                # 🚀 New Client Initialization for AQ Keys
-                client = genai.Client(api_key=API_KEY)
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={API_KEY}"
                 
-                # 🧠 The AI Brain Prompt (UPDATED: ONLY RITIK DIXIT)
-                system_prompt = f"""You are 'RailMate', an expert Indian Railways AI assistant built for a B.Tech project solely by Ritik Dixit. 
+                system_prompt = f"""You are 'RailMate', an expert Indian Railways AI assistant built for a B.Tech project solely by Ritik Dixit.
                 Keep your answers concise, highly helpful, and focused on Indian railways. Answer directly in Hinglish or English based on the user's input.
                 User Query: {user_query}"""
                 
-                # Generate content using modern Gemini model
-                response = client.models.generate_content(
-                    model='gemini-3.6-flash',
-                    contents=system_prompt,
-                )
+                payload = {
+                    "contents": [{"parts": [{"text": system_prompt}]}],
+                    "generationConfig": {"temperature": 0.7, "maxOutputTokens": 500}
+                }
                 
-                status.update(label="Response Ready!", state="complete", expanded=False)
-                st.sidebar.info(f"💡 **RailMate:** {response.text}")
+                response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'}, timeout=30)
                 
+                if response.status_code == 200:
+                    ai_text = response.json().get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', "Sorry, I couldn't process that.")
+                    status.update(label="Response Ready!", state="complete", expanded=False)
+                    st.sidebar.success(f"**RailMate:** {ai_text}")
+                else:
+                    status.update(label="API Error", state="error", expanded=False)
+                    st.sidebar.error(f"⎠️ RailMate API Error: {response.text}")
+                    
             except Exception as e:
-                status.update(label="Network Error", state="error")
-                st.sidebar.error(f"⚠️ AI connection failed: {e}")
+                status.update(label="Network Error", state="error", expanded=False)
+                st.sidebar.error("⎠️ Connection failed. Please check your internet.")
+
     # ====================================================================
 
 # --- 8. MAIN UI HERO & INPUTS ---
@@ -822,7 +952,7 @@ if not route_trains.empty:
     st.markdown("""
     <style>
     div[data-testid="stButton"] button {
-        background: linear-gradient(145deg, #1E293B, #0F172A);
+        background: linear-gradient(145deg, var(--bg-1), var(--bg-2));
         border: 1px solid rgba(0, 229, 255, 0.4);
         border-radius: 8px;
         padding: 2px;
@@ -830,7 +960,7 @@ if not route_trains.empty:
         transition: all 0.3s;
     }
     div[data-testid="stButton"] button:hover {
-        border-color: #00E676;
+        border-color: var(--neon-green);
         transform: translateY(-3px);
         box-shadow: 0 5px 15px rgba(0, 230, 118, 0.2);
     }
@@ -838,7 +968,7 @@ if not route_trains.empty:
         font-size: 0.9rem; 
         font-weight: 800; 
         line-height: 1.5; 
-        color: #E2E8F0;
+        color: var(--text-light);
         white-space: pre-wrap !important; /* 🔥 THE MAGIC FIX FOR SEAT STATUS */
         text-align: center;
         margin: 0;
@@ -882,8 +1012,8 @@ if not route_trains.empty:
     # 🚂 PHASE 1: RAIL-YATRI STYLE TRAIN LISTING (100% ACCURATE)
     # ====================================================================
     if st.session_state.selected_train_no is None:
-        st.markdown(f"<h3 style='color: #00E5FF; text-align:center;'>🚂 Available Trains: {origin_code} ⟷ {dest_code}</h3>", unsafe_allow_html=True)
-        st.markdown("<hr style='border: 1px dashed rgba(255,255,255,0.2); margin-bottom: 20px;'>", unsafe_allow_html=True)
+        st.markdown(f"<h3 style='color: var(--neon-cyan); text-align:center;'>🚂 Available Trains: {origin_code} ⟷ {dest_code}</h3>", unsafe_allow_html=True)
+        st.markdown("<hr style='border: 1px dashed var(--white-alpha-20); margin-bottom: 20px;'>", unsafe_allow_html=True)
 
         for idx, row in route_trains.iterrows():
             t_no = str(row['Train_No'])
@@ -898,20 +1028,20 @@ if not route_trains.empty:
             days_names = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
             days_html = ""
             for i, val in enumerate(running_days):
-                color = "#00E676" if val == '1' else "#334155"
+                color = "var(--neon-green)" if val == '1' else "var(--border-light)"
                 bg = "rgba(0, 230, 118, 0.15)" if val == '1' else "transparent"
                 days_html += f"<span style='color: {color}; background: {bg}; padding: 2px 5px; border-radius: 4px; margin-right: 3px; font-size: 0.7rem; font-weight: bold;'>{days_names[i]}</span>"
 
             st.markdown(f"""
-            <div style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,229,255,0.3); margin-top: 15px; margin-bottom: 5px;">
+            <div style="background: linear-gradient(90deg, var(--bg-1-alpha-80), var(--bg-alpha-90)); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,229,255,0.3); margin-top: 15px; margin-bottom: 5px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="font-size: 1.15rem; font-weight: 900; color: #FFFFFF; letter-spacing: 0.5px;">{t_name} <span style="color: #00E5FF; font-size: 0.9rem;">({t_no})</span></div>
-                    <div style="font-size: 0.75rem; font-weight: 800; color: #94A3B8; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 20px;">{row['Type']}</div>
+                    <div style="font-size: 1.15rem; font-weight: 900; color: var(--text-main); letter-spacing: 0.5px;">{t_name} <span style="color: var(--neon-cyan); font-size: 0.9rem;">({t_no})</span></div>
+                    <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); background: var(--white-alpha-10); padding: 4px 10px; border-radius: 20px;">{row['Type']}</div>
                 </div>
                 <div style="margin-top: 8px;">{days_html}</div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-weight: bold;">
-                    <div style="color: #00E676; font-size: 1.2rem; text-shadow: 0 0 5px rgba(0,230,118,0.4);">{f_dep} <span style="font-size:0.75rem; color:#94A3B8;">{origin_code}</span></div>
-                    <div style="color: #FF1744; font-size: 1.2rem; text-shadow: 0 0 5px rgba(255,23,68,0.4);"><span style="font-size:0.75rem; color:#94A3B8;">{dest_code}</span> {f_arr}</div>
+                    <div style="color: var(--neon-green); font-size: 1.2rem; text-shadow: 0 0 5px rgba(0,230,118,0.4);">{f_dep} <span style="font-size:0.75rem; color:var(--text-muted);">{origin_code}</span></div>
+                    <div style="color: var(--neon-red); font-size: 1.2rem; text-shadow: 0 0 5px rgba(255,23,68,0.4);"><span style="font-size:0.75rem; color:var(--text-muted);">{dest_code}</span> {f_arr}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -951,7 +1081,7 @@ if not route_trains.empty:
                             st.session_state.selected_class = c_code
                             st.rerun() 
             else:
-                st.markdown("<div style='color:#94A3B8; font-size:0.85rem; text-align:center;'>⚠️ Class info currently updating from servers...</div>", unsafe_allow_html=True)
+                st.markdown("<div style='color:var(--text-muted); font-size:0.85rem; text-align:center;'>⚠️ Class info currently updating from servers...</div>", unsafe_allow_html=True)
                     
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -970,7 +1100,7 @@ if not route_trains.empty:
             st.session_state.selected_class = None
             st.rerun()
 
-        st.markdown(f"<div style='background: rgba(0, 229, 255, 0.1); border-left: 4px solid #00E5FF; padding: 10px 15px; border-radius: 5px; margin: 15px 0;'><b>Analyzing:</b> {train_data['Train_Name']} ({selected_train_no}) | <b>Class:</b> {short_class}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background: rgba(0, 229, 255, 0.1); border-left: 4px solid var(--neon-cyan); padding: 10px 15px; border-radius: 5px; margin: 15px 0;'><b>Analyzing:</b> {train_data['Train_Name']} ({selected_train_no}) | <b>Class:</b> {short_class}</div>", unsafe_allow_html=True)
         col_date, col_dummy = st.columns([1, 2])
         with col_date:
             today = datetime.date.today()
@@ -978,8 +1108,9 @@ if not route_trains.empty:
             
             st.markdown("""
             <style>
-            div[data-testid="stDateInput"] input::placeholder { color: #00E5FF !important; opacity: 0.8 !important; font-weight: 600 !important; }
-            div[data-testid="stDateInput"] input { color: #FFFFFF !important; font-weight: 700 !important; }
+            div[data-testid="stDateInput"] input::placeholder { color: var(--neon-cyan) !important; opacity: 0.8 !important; font-weight: 600 !important; }
+            div[data-testid="stDateInput"] input { color: var(--text-main) !important; font-weight: 700 !important; caret-color: transparent; cursor: pointer; }
+div[data-testid="stDateInput"] { cursor: pointer; }
             </style>
             """, unsafe_allow_html=True)
             
@@ -992,7 +1123,7 @@ if not route_trains.empty:
                 
             days_to_journey = max(1, (journey_date - today).days)
                 
-        st.markdown("""<img src="dummy" onerror="setTimeout(function(){var inputs = document.querySelectorAll('div[data-testid=\\'stDateInput\\'] input'); for(var i=0; i<inputs.length; i++){inputs[i].setAttribute('inputmode', 'none');}}, 500);" style="display:none;">""", unsafe_allow_html=True)
+        st.markdown("""<img src="dummy" onerror="setTimeout(function(){var inputs = document.querySelectorAll('div[data-testid=\\'stDateInput\\'] input'); for(var i=0; i<inputs.length; i++){inputs[i].setAttribute('readonly', 'readonly'); inputs[i].addEventListener('focus', function(){this.blur();});}}, 500);" style="display:none;">""", unsafe_allow_html=True)
 
         # 🔄 Fetch API Data for Date
         formatted_date = journey_date.strftime("%d-%m-%Y")
@@ -1045,30 +1176,30 @@ if not route_trains.empty:
         # ?? LIVE STATUS & FARE BANNER
     # ====================================================================
             main_status = seat_list[0].get("status", "N/A")
-            status_color = "#00E676" if "AVAIL" in main_status.upper() or "CURR" in main_status.upper() else "#FF1744" if "WL" in main_status.upper() else "#FF9100"
+            status_color = "var(--neon-green)" if "AVAIL" in main_status.upper() or "CURR" in main_status.upper() else "var(--neon-red)" if "WL" in main_status.upper() else "var(--neon-orange)"
             
             if "/" in main_status:
                 parts = main_status.split("/")
                 initial, current = parts[0].strip(), parts[-1].strip()
-                ui_status = f'<div style="display: flex; align-items: center; gap: 12px;"><div style="color: {status_color}; font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px {status_color}88;">{current}</div><div style="color: #94A3B8; font-size: 0.85rem; font-weight: bold; padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1);">Initial: {initial}</div></div>'
+                ui_status = f'<div style="display: flex; align-items: center; gap: 12px;"><div style="color: {status_color}; font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px {status_color}88;">{current}</div><div style="color: var(--text-muted); font-size: 0.85rem; font-weight: bold; padding: 4px 10px; border-radius: 20px; background: var(--white-alpha-10); border: 1px solid var(--white-alpha-10);">Initial: {initial}</div></div>'
             elif "AVAIL" in main_status.upper():
                 num = main_status.upper().replace("AVAILABLE", "").replace("AVAIL", "").replace("-", "").strip()
                 if num:
-                    ui_status = f'<div style="display: flex; align-items: center; gap: 12px;"><div style="color: {status_color}; font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px {status_color}88;">AVAILABLE</div><div style="color: #00E676; font-size: 1.1rem; font-weight: 900; padding: 4px 12px; border-radius: 20px; background: rgba(0, 230, 118, 0.15); border: 1px solid rgba(0, 230, 118, 0.3);">{num} Seats</div></div>'
+                    ui_status = f'<div style="display: flex; align-items: center; gap: 12px;"><div style="color: {status_color}; font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px {status_color}88;">AVAILABLE</div><div style="color: var(--neon-green); font-size: 1.1rem; font-weight: 900; padding: 4px 12px; border-radius: 20px; background: rgba(0, 230, 118, 0.15); border: 1px solid rgba(0, 230, 118, 0.3);">{num} Seats</div></div>'
                 else:
                     ui_status = f'<div style="color: {status_color}; font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px {status_color}88;">AVAILABLE</div>'
             else:
                 ui_status = f'<div style="color: {status_color}; font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px {status_color}88;">{main_status}</div>'
             
             st.markdown(f"""
-            <div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9)); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 12px; padding: 20px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
+            <div style="background: linear-gradient(135deg, var(--bg-alpha-90), var(--bg-1-alpha-90)); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 12px; padding: 20px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 8px 32px var(--black-alpha-30);">
                 <div>
-                    <div style="color: #94A3B8; font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Selected Date Status</div>
+                    <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Selected Date Status</div>
                     {ui_status}
                 </div>
                 <div style="text-align: right;">
-                    <div style="color: #94A3B8; font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Current Fare</div>
-                    <div style="color: #00E5FF; font-size: 1.8rem; font-weight: 900;">&#8377;{real_fare}</div>
+                    <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Current Fare</div>
+                    <div style="color: var(--neon-cyan); font-size: 1.8rem; font-weight: 900;">&#8377;{real_fare}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1092,24 +1223,24 @@ if not route_trains.empty:
                 if "WL" in main_st:
                     users_viewing = 120 + wl_number * 3 + urgency * 5 + random.randint(10, 40)
                     booking_rate = int(users_viewing * 0.25)
-                    trend_color = "#FF1744"
+                    trend_color = "var(--neon-red)"
                     trend_text = "EXTREME DEMAND"
-                    box_bg = "linear-gradient(145deg, #2A1118, #0F172A)"
+                    box_bg = "linear-gradient(145deg, #2A1118, var(--bg-2))"
                 elif "RAC" in main_st:
                     users_viewing = 60 + wl_number * 2 + urgency * 3 + random.randint(5, 20)
                     booking_rate = int(users_viewing * 0.18)
-                    trend_color = "#FF9100"
+                    trend_color = "var(--neon-orange)"
                     trend_text = "HIGH DEMAND"
-                    box_bg = "linear-gradient(145deg, #2A1A08, #0F172A)"
+                    box_bg = "linear-gradient(145deg, #2A1A08, var(--bg-2))"
                 else: # Available
                     avail_num = 50
                     try: avail_num = int(re.sub(r'[^0-9]', '', main_st))
                     except: pass
                     users_viewing = max(15, 80 - avail_num + urgency * 2 + random.randint(5, 15))
                     booking_rate = int(users_viewing * 0.08)
-                    trend_color = "#00E676"
+                    trend_color = "var(--neon-green)"
                     trend_text = "FILLING FAST" if avail_num < 30 else "STEADY DEMAND"
-                    box_bg = "linear-gradient(145deg, #0A1C14, #0F172A)"
+                    box_bg = "linear-gradient(145deg, #0A1C14, var(--bg-2))"
                 
                 st.markdown(f"""
                 <style>
@@ -1123,15 +1254,15 @@ if not route_trains.empty:
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid {trend_color}44; padding-bottom: 8px; margin-bottom: 12px;">
                         <div style="display: flex; align-items: center;"><div class="live-dot-{trend_color.replace('#','')}"></div><span style="color: {trend_color}; font-weight: 900; font-size: 13px; letter-spacing: 1px;">{trend_text}</span></div>
                     </div>
-                    <div style="color: #E2E8F0; font-size: 14.5px; line-height: 1.6;">
-                        <b style="color: #FFFFFF; font-size: 18px;">{users_viewing}</b> travelers viewing this train.<br>
-                        <span style="color: #FFD600; font-size: 13px; font-weight: bold;">&#9889; {booking_rate} bookings in last hour!</span>
+                    <div style="color: var(--text-light); font-size: 14.5px; line-height: 1.6;">
+                        <b style="color: var(--text-main); font-size: 18px;">{users_viewing}</b> travelers viewing this train.<br>
+                        <span style="color: var(--neon-yellow); font-size: 13px; font-weight: bold;">&#9889; {booking_rate} bookings in last hour!</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
             with col_calendar:
-                st.markdown(f"<h4 style='color: #00E5FF; font-size: 1.1rem; margin-top: 0px; margin-bottom: 12px;'>📅 Next 6 Days Availability ({short_class})</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='color: var(--neon-cyan); font-size: 1.1rem; margin-top: 0px; margin-bottom: 12px;'>📅 Next 6 Days Availability ({short_class})</h4>", unsafe_allow_html=True)
                 
                 calendar_html = '<div class="swipe-container">'
                 for idx, day_data in enumerate(seat_list[:6]):
@@ -1151,18 +1282,18 @@ if not route_trains.empty:
                     
                     # 🚨 THE FIX: Saaf-suthra aur CRASH-PROOF code
                     if "AVL" in c_stat or "AVAILABLE" in c_stat:
-                        box_color, chance_text, badge_bg = "#00E676", "Available", "rgba(0, 230, 118, 0.15)"
+                        box_color, chance_text, badge_bg = "var(--neon-green)", "Available", "rgba(0, 230, 118, 0.15)"
                         nums = re.findall(r'\d+', c_stat)
                         c_stat = f"AVL {int(nums[-1]):02d}" if nums else "AVL"
                     elif "RAC" in c_stat: 
-                        box_color, chance_text, badge_bg = "#FFD600", f"{pct}% Chance" if pct else "RAC", "rgba(255, 214, 0, 0.15)"
+                        box_color, chance_text, badge_bg = "var(--neon-yellow)", f"{pct}% Chance" if pct else "RAC", "rgba(255, 214, 0, 0.15)"
                     elif "WL" in c_stat or "WAIT" in c_stat: 
-                        box_color, chance_text, badge_bg = "#FF9100", f"{pct}% Chance" if pct else "Waitlist", "rgba(255, 145, 0, 0.15)"
+                        box_color, chance_text, badge_bg = "var(--neon-orange)", f"{pct}% Chance" if pct else "Waitlist", "rgba(255, 145, 0, 0.15)"
                         c_stat = re.sub(r'([A-Z]+)(\d+)', r'\1 \2', c_stat)
                     else: 
-                        box_color, c_stat, chance_text, badge_bg = "#FF1744", "REGRET", "No Chance", "rgba(255, 23, 68, 0.15)"
+                        box_color, c_stat, chance_text, badge_bg = "var(--neon-red)", "REGRET", "No Chance", "rgba(255, 23, 68, 0.15)"
 
-                    calendar_html += f'<div class="swipe-card" style="background: linear-gradient(145deg, #1E293B, #0F172A); border: 1px solid {box_color}60; border-radius: 12px; padding: 12px 8px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4);"><div style="color: #94A3B8; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">{display_date}</div><div style="color: {box_color}; font-size: 1.1rem; font-weight: 900; margin-bottom: 6px; text-shadow: 0 0 8px {box_color}40;">{c_stat}</div><div style="color: {box_color}; font-size: 0.65rem; font-weight: 800; background: {badge_bg}; border-radius: 20px; padding: 4px 2px; white-space: nowrap;">{chance_text}</div></div>'
+                    calendar_html += f'<div class="swipe-card" style="background: linear-gradient(145deg, var(--bg-1), var(--bg-2)); border: 1px solid {box_color}60; border-radius: 12px; padding: 12px 8px; text-align: center; box-shadow: 0 4px 10px var(--black-alpha-40);"><div style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">{display_date}</div><div style="color: {box_color}; font-size: 1.1rem; font-weight: 900; margin-bottom: 6px; text-shadow: 0 0 8px {box_color}40;">{c_stat}</div><div style="color: {box_color}; font-size: 0.65rem; font-weight: 800; background: {badge_bg}; border-radius: 20px; padding: 4px 2px; white-space: nowrap;">{chance_text}</div></div>'
                 
                 calendar_html += "</div>"
                 st.markdown(calendar_html, unsafe_allow_html=True)
@@ -1279,7 +1410,7 @@ if not route_trains.empty:
                 <div class="prediction-card">
                     <div class="pred-label">Live Dynamic Fare ({selected_class})</div>
                     <div class="pred-price">₹{int(current_surge_price):,}</div>
-                    <div class="pred-meta">Model Active: <span style="color:#00E676;">{pricing_model_name}</span> | Base Fare: ₹{adjusted_base_fare:,}</div>
+                    <div class="pred-meta">Model Active: <span style="color:var(--neon-green);">{pricing_model_name}</span> | Base Fare: ₹{adjusted_base_fare:,}</div>
                 </div>
                 """, unsafe_allow_html=True)
             with col_cart:
@@ -1326,8 +1457,8 @@ if not route_trains.empty:
                 
                 if classes_list:
                     df_c = pd.DataFrame({'Class': classes_list * 2, 'Fare': base_f_list + surge_f_list, 'Type': ['Base Fare']*len(classes_list) + ['Live Surged Fare']*len(classes_list)})
-                    fig1 = px.bar(df_c, x='Class', y='Fare', color='Type', barmode='group', title=f"Fare Comparison Across Classes ({selected_train_no})", color_discrete_map={'Base Fare': '#334155', 'Live Surged Fare': '#00E5FF'})
-                    fig1.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="#E2E8F0", title_font=dict(color='#00E5FF', size=16), yaxis_title="Fare (\u20B9)", legend=dict(font=dict(color='#E2E8F0'), title=dict(font=dict(color='#00E5FF'))))
+                    fig1 = px.bar(df_c, x='Class', y='Fare', color='Type', barmode='group', title=f"Fare Comparison Across Classes ({selected_train_no})", color_discrete_map={'Base Fare': 'var(--border-light)', 'Live Surged Fare': 'var(--neon-cyan)'})
+                    fig1.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="var(--text-light)", title_font=dict(color='var(--neon-cyan)', size=16), yaxis_title="Fare (\u20B9)", legend=dict(font=dict(color='var(--text-light)'), title=dict(font=dict(color='var(--neon-cyan)'))))
                     st.plotly_chart(fig1, use_container_width=True, config={'staticPlot': True})
                 else:
                     st.info("No class data available for comparison.")
@@ -1355,8 +1486,8 @@ if not route_trains.empty:
                         
                 if train_names:
                     df_t = pd.DataFrame({'Train': train_names * 2, 'Fare': t_base_list + t_surge_list, 'Type': ['Base Fare']*len(train_names) + ['Live Surged Fare']*len(train_names)})
-                    fig2 = px.bar(df_t, y='Train', x='Fare', color='Type', orientation='h', barmode='group', title=f"Route Comparison for {short_class} Class", color_discrete_map={'Base Fare': '#334155', 'Live Surged Fare': '#00E676'})
-                    fig2.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="#E2E8F0", title_font=dict(color='#00E5FF', size=16), xaxis_title="Fare (\u20B9)", legend=dict(font=dict(color='#E2E8F0'), title=dict(font=dict(color='#00E5FF'))))
+                    fig2 = px.bar(df_t, y='Train', x='Fare', color='Type', orientation='h', barmode='group', title=f"Route Comparison for {short_class} Class", color_discrete_map={'Base Fare': 'var(--border-light)', 'Live Surged Fare': 'var(--neon-green)'})
+                    fig2.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="var(--text-light)", title_font=dict(color='var(--neon-cyan)', size=16), xaxis_title="Fare (\u20B9)", legend=dict(font=dict(color='var(--text-light)'), title=dict(font=dict(color='var(--neon-cyan)'))))
                     st.plotly_chart(fig2, use_container_width=True, config={'staticPlot': True})
                 else:
                     st.info("No route data available for comparison.")
@@ -1366,7 +1497,7 @@ if not route_trains.empty:
                 # 🛡️ FEATURE 2 ENHANCED: SMART 'PLAN B' STRATEGY (Premium UI & Logic)
                 # ====================================================================
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("<h3 style='color: #FFD600; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);'>🛡️ RailFare AI: Smart Travel Strategy</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='color: var(--neon-yellow); text-shadow: 1px 1px 3px var(--black-alpha-80);'>🛡️ RailFare AI: Smart Travel Strategy</h3>", unsafe_allow_html=True)
         
             plan_col1, plan_col2 = st.columns(2)
         
@@ -1377,21 +1508,21 @@ if not route_trains.empty:
             tatkal_time = "10:00 AM (AC Class)" if is_ac else "11:00 AM (Non-AC Class)"
         
             if seats_booked_pct <= 100:
-                    risk_color = "#00E676"  # Safe Green
+                    risk_color = "var(--neon-green)"  # Safe Green
                     risk_level = "LOW RISK (Safe Zone)"
                     risk_desc = "Ticket almost confirmed ya available hai. Surge badhne se pehle book kar lein."
                     action_1 = "✅ <b>Immediate Action:</b> Book right now to lock the lowest base fare."
                     action_2 = "💡 <b>Pro Tip:</b> Chart preparation tak wait na karein, demand badhne par flexi-fare lag sakta hai."
             
             elif seats_booked_pct > 100 and seats_booked_pct <= 115:
-                    risk_color = "#FFD600"  # Warning Yellow
+                    risk_color = "var(--neon-yellow)"  # Warning Yellow
                     risk_level = "MODERATE RISK (Borderline)"
                     risk_desc = f"Waitlist/RAC chal rahi hai. Journey me {days_to_journey} days bache hain, chances hain confirm hone ke."
                     action_1 = "⚠️ <b>Action Plan:</b> Normal ticket book kar lein, par backup ready rakhein."
                     action_2 = "🔄 <b>Vikalp Scheme:</b> Book karte waqt IRCTC ki 'Vikalp' (Alternate Train) scheme zarur select karein."
             
             else:
-                    risk_color = "#FF1744"  # Danger Red
+                    risk_color = "var(--neon-red)"  # Danger Red
                     risk_level = "HIGH RISK (Critical Zone)"
                     risk_desc = "Waitlist bohot lambi hai ya REGRET ho gaya hai. Normal ticket ka confirm hona kaafi mushkil hai."
                     action_1 = f"🕒 <b>Tatkal Strategy:</b> Kal subah exact <b>{tatkal_time}</b> par Tatkal quota try karein."
@@ -1400,24 +1531,24 @@ if not route_trains.empty:
                 # --- 🎨 PREMIUM UI DESIGN (Cards) ---
             with plan_col1:
                     st.markdown(f"""
-                    <div style='background: linear-gradient(145deg, #1E293B, #0F172A); padding: 20px; border-radius: 12px; border-left: 6px solid {risk_color}; box-shadow: 0 6px 15px rgba(0,0,0,0.4); display: flex; flex-direction: column; justify-content: center; word-wrap: break-word; min-height: 180px;'>
+                    <div style='background: linear-gradient(145deg, var(--bg-1), var(--bg-2)); padding: 20px; border-radius: 12px; border-left: 6px solid {risk_color}; box-shadow: 0 6px 15px var(--black-alpha-40); display: flex; flex-direction: column; justify-content: center; word-wrap: break-word; min-height: 180px;'>
                         <h4 style='color: {risk_color}; margin-top: 0; font-weight: 800; font-size: 1.1rem;'>{risk_level}</h4>
-                        <p style='color: #E2E8F0; font-size: 15px; margin-bottom: 15px;'>{risk_desc}</p>
-                        <div style='background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);'>
-                            <span style='color: #94A3B8; font-size: 13px;'>Journey Proximity:</span> <b style='color: #FFFFFF;'>{days_to_journey} Days</b><br>
-                            <span style='color: #94A3B8; font-size: 13px;'>Selected Class:</span> <b style='color: #FFFFFF;'>{short_class}</b>
+                        <p style='color: var(--text-light); font-size: 15px; margin-bottom: 15px;'>{risk_desc}</p>
+                        <div style='background: var(--white-alpha-05); padding: 10px; border-radius: 6px; border: 1px solid var(--white-alpha-10);'>
+                            <span style='color: var(--text-muted); font-size: 13px;'>Journey Proximity:</span> <b style='color: var(--text-main);'>{days_to_journey} Days</b><br>
+                            <span style='color: var(--text-muted); font-size: 13px;'>Selected Class:</span> <b style='color: var(--text-main);'>{short_class}</b>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
             
             with plan_col2:
                     st.markdown(f"""
-                    <div style='background: linear-gradient(145deg, #1E293B, #0F172A); padding: 20px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 6px 15px rgba(0,0,0,0.4); display: flex; flex-direction: column; justify-content: center; word-wrap: break-word; min-height: 180px;'>
-                        <h4 style='color: #00E5FF; margin-top: 0; font-weight: 800; font-size: 1.1rem;'>⚡ RailFare 'Plan B'</h4>
-                        <p style='color: #F8FAFC; font-size: 14.5px; line-height: 1.6; margin-bottom: 10px;'>{action_1}</p>
-                        <p style='color: #F8FAFC; font-size: 14.5px; line-height: 1.6; margin-bottom: 15px;'>{action_2}</p>
-                        <div style='border-top: 1px dashed #334155; padding-top: 10px; text-align: center;'>
-                            <span style='color: #FFD600; font-size: 13px; font-weight: bold; letter-spacing: 0.5px;'>🤖 AI SUGGESTION ENGINE ACTIVE</span>
+                    <div style='background: linear-gradient(145deg, var(--bg-1), var(--bg-2)); padding: 20px; border-radius: 12px; border: 1px solid var(--border-light); box-shadow: 0 6px 15px var(--black-alpha-40); display: flex; flex-direction: column; justify-content: center; word-wrap: break-word; min-height: 180px;'>
+                        <h4 style='color: var(--neon-cyan); margin-top: 0; font-weight: 800; font-size: 1.1rem;'>⚡ RailFare 'Plan B'</h4>
+                        <p style='color: var(--text-main); font-size: 14.5px; line-height: 1.6; margin-bottom: 10px;'>{action_1}</p>
+                        <p style='color: var(--text-main); font-size: 14.5px; line-height: 1.6; margin-bottom: 15px;'>{action_2}</p>
+                        <div style='border-top: 1px dashed var(--border-light); padding-top: 10px; text-align: center;'>
+                            <span style='color: var(--neon-yellow); font-size: 13px; font-weight: bold; letter-spacing: 0.5px;'>🤖 AI SUGGESTION ENGINE ACTIVE</span>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -1426,11 +1557,11 @@ if not route_trains.empty:
                 # 🔔 FEATURE 4 ENHANCED: SMART PRICE ALERT (Professional UI)
                 # ====================================================================
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("<h3 style='color: #00E676; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); margin-top: 30px;'>🔔 Set AI Price Alert</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='color: var(--neon-green); text-shadow: 1px 1px 3px var(--black-alpha-80); margin-top: 30px;'>🔔 Set AI Price Alert</h3>", unsafe_allow_html=True)
             
             st.markdown("""
-            <div style='background: rgba(15, 23, 42, 0.6); padding: 15px 20px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 20px; word-wrap: break-word; white-space: normal;'>
-                <p style='color: #E2E8F0; font-size: 15.5px; margin: 0;'>Select your target price and notification channel. Our AI will monitor the dynamic fare curve 24/7 and alert you instantly when prices drop.</p>
+            <div style='background: var(--bg-alpha-60); padding: 15px 20px; border-radius: 12px; border: 1px solid var(--border-light); margin-bottom: 20px; word-wrap: break-word; white-space: normal;'>
+                <p style='color: var(--text-light); font-size: 15.5px; margin: 0;'>Select your target price and notification channel. Our AI will monitor the dynamic fare curve 24/7 and alert you instantly when prices drop.</p>
             </div>
             """, unsafe_allow_html=True)
             
@@ -1443,13 +1574,13 @@ if not route_trains.empty:
             st.markdown("""
             <style>
             div[data-testid="stRadio"] label p, div[data-testid="stTextInput"] label p {
-                color: #00E5FF !important;
+                color: var(--neon-cyan) !important;
                 font-size: 15px !important;
                 font-weight: bold !important;
                 letter-spacing: 0.5px;
             }
             div[data-testid="stRadio"] div[role="radiogroup"] p {
-                color: #FFFFFF !important;
+                color: var(--text-main) !important;
                 font-size: 14.5px !important;
                 font-weight: 600 !important;
             }
@@ -1471,24 +1602,24 @@ if not route_trains.empty:
             discount_pct = ((adjusted_base_fare - target_price) / adjusted_base_fare) * 100
             if target_price >= adjusted_base_fare:
                 prob_text = "VERY HIGH (Current)"
-                prob_color = "#00E676"
+                prob_color = "var(--neon-green)"
             elif discount_pct < 10:
                 prob_text = "HIGH (Slight Drop)"
-                prob_color = "#00E676"
+                prob_color = "var(--neon-green)"
             elif discount_pct >= 10 and discount_pct < 20:
                 prob_text = "MODERATE (Wait/Watch)"
-                prob_color = "#FFD600"
+                prob_color = "var(--neon-yellow)"
             else:
                 prob_text = "LOW (Rare Drop)"
-                prob_color = "#FF1744"
+                prob_color = "var(--neon-red)"
                 
             with alert_col2:
                 st.markdown(f"""
-                <div style='background: rgba(0,0,0,0.3); padding: 25px; border-radius: 12px; border: 1px dashed {prob_color}; text-align: center; display: flex; flex-direction: column; justify-content: center; word-wrap: break-word; min-height: 180px;'>
-                    <div style='color: #94A3B8; font-size: 14px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;'>Target Set At</div>
-                    <div style='color: #FFFFFF; font-size: 38px; font-weight: 900; margin-bottom: 15px;'>&#8377;{target_price}</div>
-                    <div style='background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;'>
-                        <span style='color: #94A3B8; font-size: 13px;'>AI Drop Probability</span><br>
+                <div style='background: var(--black-alpha-30); padding: 25px; border-radius: 12px; border: 1px dashed {prob_color}; text-align: center; display: flex; flex-direction: column; justify-content: center; word-wrap: break-word; min-height: 180px;'>
+                    <div style='color: var(--text-muted); font-size: 14px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;'>Target Set At</div>
+                    <div style='color: var(--text-main); font-size: 38px; font-weight: 900; margin-bottom: 15px;'>&#8377;{target_price}</div>
+                    <div style='background: var(--white-alpha-05); padding: 10px; border-radius: 8px;'>
+                        <span style='color: var(--text-muted); font-size: 13px;'>AI Drop Probability</span><br>
                         <b style='color: {prob_color}; font-size: 16px;'>{prob_text}</b>
                     </div>
                 </div>
