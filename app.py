@@ -927,6 +927,9 @@ else:
     else:
         # Dono alag-alag station mil gaye, ab API run karo!
         route_trains = fetch_trains(origin_code, dest_code)
+        
+        if route_trains.empty:
+            st.warning(f"🚫 **No direct trains available** between **{origin_code}** and **{dest_code}**. Please try selecting a different route.")
 
 
 # ====================================================================
