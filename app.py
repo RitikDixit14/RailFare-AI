@@ -960,70 +960,86 @@ def render_train_animation():
     }
     
     .css-coach {
-        width: 70px;
-        height: 35px;
-        background: #1976D2; /* LHB coach blue */
+        width: 80px;
+        height: 38px;
+        background: #ffffff; /* Modern White */
         border-radius: 4px;
         position: relative;
-        border: 2px solid #0D47A1;
-        box-shadow: inset 0 -4px 0 rgba(0,0,0,0.2);
+        border: 1px solid #ccc;
+        border-bottom: 2px solid #999;
+        box-shadow: inset 0 -4px 0 rgba(0,0,0,0.05);
     }
     .css-coach::before {
-        content: '';
-        position: absolute;
-        top: 6px;
-        left: 5px;
-        width: 56px;
-        height: 10px;
-        background: repeating-linear-gradient(90deg, #bbdefb 0%, #bbdefb 10px, transparent 10px, transparent 14px);
-    }
-    .css-coach::after {
-        content: '';
-        position: absolute;
-        bottom: 5px;
-        left: 5px;
-        width: 56px;
-        height: 3px;
-        background: #ffeb3b; /* yellow stripe */
-    }
-    
-    .css-engine {
-        width: 80px;
-        height: 45px;
-        background: #d32f2f; /* WAP-4 or WAP-7 red/white */
-        border-radius: 4px 20px 4px 4px; /* Slanted right side */
-        position: relative;
-        border: 2px solid #b71c1c;
-        box-shadow: inset 0 -4px 0 rgba(0,0,0,0.2);
-    }
-    .css-engine::before {
+        /* Modern Continuous Black/Dark Window Band */
         content: '';
         position: absolute;
         top: 8px;
-        right: 12px; /* Window on the right (front) */
-        width: 15px;
-        height: 12px;
-        background: #bbdefb;
-        border-radius: 2px 8px 2px 2px;
+        left: -1px;
+        width: 82px;
+        height: 14px;
+        background: #111827; 
     }
-    .css-engine::after { /* Headlight glow */
+    .css-coach::after {
+        /* Vande Bharat signature Blue Stripe */
         content: '';
         position: absolute;
-        bottom: 10px;
-        right: -8px;
+        bottom: 6px;
+        left: -1px;
+        width: 82px;
+        height: 3px;
+        background: #1976D2; 
+    }
+    
+    .css-engine {
+        width: 100px;
+        height: 38px;
+        background: #ffffff; /* Modern White */
+        border-radius: 4px 60px 4px 4px; /* Highly Aerodynamic Sloped Nose */
+        position: relative;
+        border: 1px solid #ccc;
+        border-bottom: 2px solid #999;
+        box-shadow: inset 0 -4px 0 rgba(0,0,0,0.05);
+    }
+    .css-engine::before {
+        /* Sloped Cockpit Window */
+        content: '';
+        position: absolute;
+        top: 7px;
+        right: 6px; 
+        width: 35px;
+        height: 15px;
+        background: #111827;
+        border-radius: 2px 25px 2px 2px;
+    }
+    .css-engine::after { 
+        /* Vande Bharat signature Blue Stripe continuing to nose */
+        content: '';
+        position: absolute;
+        bottom: 6px;
+        left: -1px;
+        width: 95px;
+        height: 3px;
+        background: #1976D2;
+        border-radius: 0 0 20px 0;
+    }
+    .headlight {
+        position: absolute;
+        bottom: 12px;
+        right: -2px;
         width: 6px;
         height: 10px;
         background: #fff;
         border-radius: 50%;
-        box-shadow: 10px 0 15px 5px rgba(255, 255, 255, 0.8), 15px 0 25px 10px rgba(0, 229, 255, 0.6);
+        box-shadow: 10px 0 15px 5px rgba(255, 255, 255, 0.9), 15px 0 25px 10px rgba(0, 229, 255, 0.7);
+        z-index: 5;
     }
     .pantograph {
         position: absolute;
-        top: -10px;
-        left: 15px;
+        top: -12px;
+        left: 20px;
         width: 25px;
-        height: 10px;
-        border: 2px solid #999;
+        height: 12px;
+        border: 2px solid #777;
         border-bottom: none;
         border-right: none;
         transform: skewX(-30deg);
@@ -1031,36 +1047,37 @@ def render_train_animation():
     
     .wheel-container {
         position: absolute;
-        bottom: -8px;
+        bottom: -6px;
         width: 100%;
         display: flex;
         justify-content: space-evenly;
+        z-index: -1; /* partially hidden by aerodynamic skirt */
     }
     .wheel {
-        width: 14px;
-        height: 14px;
-        background: #333;
+        width: 12px;
+        height: 12px;
+        background: #222;
         border-radius: 50%;
-        border: 2px solid #777;
+        border: 2px solid #555;
         animation: spinWheels 1.5s linear infinite;
         position: relative;
     }
-    .wheel::after { /* Spoke for rotation visibility */
+    .wheel::after { 
         content: '';
         position: absolute;
         top: 50%;
         left: 50%;
         width: 6px;
         height: 2px;
-        background: #ccc;
+        background: #aaa;
         transform-origin: left center;
     }
     .connector {
-        width: 6px;
-        height: 4px;
-        background: #555;
+        width: 2px; /* Tight modern coupling */
+        height: 32px;
+        background: #333;
         align-self: center;
-        margin-bottom: 6px;
+        margin-bottom: 2px;
     }
 
     .clouds {
@@ -1128,6 +1145,7 @@ def render_train_animation():
             <!-- Engine (Front) -->
             <div class="css-engine">
                 <div class="pantograph"></div>
+                <div class="headlight"></div>
                 <div class="wheel-container">
                     <div class="wheel"></div>
                     <div class="wheel"></div>
@@ -1139,7 +1157,8 @@ def render_train_animation():
         <div class="train-track"></div>
     </div>
     """
-    return html_code
+    import re
+    return re.sub(r'\n\s*', ' ', html_code)
 
 # Create a unified Hero Section using Streamlit Columns
 st.markdown("""
