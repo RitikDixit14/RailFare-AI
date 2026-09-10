@@ -923,19 +923,17 @@ with st.sidebar:
                 """, unsafe_allow_html=True)
         # ====================================================================
         # ====================================================================
-# Fetch Lottie Animation
+# Load Local Lottie Animation
 @st.cache_data
-def load_lottieurl(url: str):
+def load_lottiefile(filepath: str):
     try:
-        import requests
-        r = requests.get(url, timeout=5)
-        if r.status_code != 200:
-            return None
-        return r.json()
+        import json
+        with open(filepath, "r", encoding="utf-8") as f:
+            return json.load(f)
     except:
         return None
 
-lottie_train = load_lottieurl("https://assets5.lottiefiles.com/packages/lf20_j1adxtyb.json")
+lottie_train = load_lottiefile("assets/train_animation.json")
 
 # Create a unified Hero Section using Streamlit Columns
 st.markdown("""
@@ -971,7 +969,9 @@ with col2:
             from streamlit_lottie import st_lottie
             st_lottie(lottie_train, height=180, key="train_anim")
         except:
-            pass
+            st.markdown("<div style='text-align: center; font-size: 5rem;'>🚆</div><div style='text-align: center; color: var(--text-muted);'>Plan your railway journey smarter.</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("<div style='text-align: center; font-size: 5rem;'>🚆</div><div style='text-align: center; color: var(--text-muted);'>Plan your railway journey smarter.</div>", unsafe_allow_html=True)
 
 st.markdown("""
 <div class="hero-title-new">RailFare AI</div>
