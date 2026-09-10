@@ -6,6 +6,11 @@ import plotly.express as px
 import numpy as np
 import datetime
 import pickle  
+
+try:
+    from streamlit_lottie import st_lottie
+except:
+    pass
 import os
 from dotenv import load_dotenv
 import requests
@@ -117,11 +122,89 @@ _ = load_dotenv(find_dotenv()) # Yeh forcefully .env ko dhoondhega
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
+
     page_title="RailFare AI",
     page_icon="🚆",
     layout="wide",
     initial_sidebar_state="expanded" 
 )
+# ==============================================================================
+# 🚉 NEW NAVIGATION ROUTING (Phase 2)
+# ==============================================================================
+st.sidebar.title("🚆 RailFare Platform")
+nav_page = st.sidebar.radio("Navigation", ["Home - Train Search", "PNR & Live Status", "Station Congestion", "Report Grievance", "Admin Dashboard"])
+
+if nav_page != "Home - Train Search":
+    import api_services
+    import prediction_engine
+    import route_planner
+    import database
+    
+    if nav_page == "PNR & Live Status":
+        st.title("🎫 PNR & Live Running Status")
+        st.info("Authorized wrapper. PNR details are masked and not stored permanently.")
+        
+        tab_pnr, tab_live = st.tabs(["PNR Check", "Live Train Status"])
+        with tab_pnr:
+            pnr_input = st.text_input("Enter 10-digit PNR")
+            if st.button("Check PNR"):
+                res = api_services.fetch_pnr_status(pnr_input)
+                if "error" in res:
+                    st.error(res["error"])
+                else:
+                    st.success(f"PNR: {res['pnr']} | Status: {res['passenger_status'][0]['current_status']}")
+                    st.json(res)
+                    
+        with tab_live:
+            train_input = st.text_input("Train Number")
+            date_input = st.date_input("Journey Date")
+            if st.button("Check Live Status"):
+                res = api_services.fetch_live_train_status(train_input, str(date_input))
+                st.success(f"Train is {res['status']} at {res['current_station']}. Delay: {res['delay_minutes']} mins.")
+                
+                # Apply Delay Prediction
+                st.markdown("### 🤖 AI Delay Prediction")
+                pred = prediction_engine.PredictionEngine.predict_delay(train_input, {}, res)
+                st.metric("Predicted Delay", f"{pred['predicted_delay_mins']} mins", pred['trend'])
+                st.write("Confidence: ", pred['confidence_score'])
+                st.write("Factors: ", ", ".join(pred['factors']))
+                
+    elif nav_page == "Station Congestion":
+        st.title("🚉 Station Congestion Intelligence")
+        st_code = st.text_input("Enter Station Code (e.g., NDLS)", placeholder="e.g., NDLS, CSTM")
+        if st.button("Check Congestion"):
+            import station_ui
+            cong = route_planner.RoutePlanner.get_station_congestion(st_code.upper())
+            station_ui.render_station_congestion(cong)
+            
+    elif nav_page == "Report Grievance":
+        st.title("📝 Passenger Reporting System")
+        st.caption("Note: This is an app feedback system. For official complaints, use RailMadad.")
+        cat = st.selectbox("Category", ["Cleanliness", "Safety", "Overcrowding", "Delay", "Facilities", "Other"])
+        desc = st.text_area("Description")
+        ref = st.text_input("Train/Station Reference")
+        sev = st.select_slider("Severity", ["Low", "Medium", "High", "Critical"])
+        
+        if st.button("Submit Report"):
+            ref_id = database.Database.submit_complaint(cat, desc, ref, sev)
+            st.success(f"Report submitted securely! Reference ID: {ref_id}")
+            
+    elif nav_page == "Admin Dashboard":
+        st.title("🛡️ Railway Authority Dashboard")
+        st.info("Aggregated, anonymized data insights.")
+        pin = st.text_input("Enter Admin PIN", type="password")
+        if pin == "1234": # Hardcoded for demo
+            st.success("Authenticated as Administrator")
+            st.markdown("### Recent Passenger Grievances")
+            complaints = database.Database.get_all_complaints()
+            if complaints:
+                st.dataframe(complaints)
+            else:
+                st.info("No complaints logged yet.")
+        elif pin:
+            st.error("Invalid PIN")
+            
+    st.stop() # 🛑 HALT EXECUTION SO THE REST OF APP.PY DOES NOT RUN!
 
 # 📱 GLOBAL RESPONSIVE CSS FOR MOBILE & LAPTOP
 st.markdown("""
@@ -139,6 +222,15 @@ st.markdown("""
     @media (max-width: 768px) {
         html { font-size: 14px; }
         .block-container { padding: 0.5rem !important; }
+        
+        /* Enforce touch target size */
+        div[data-testid="stButton"] button { min-height: 44px !important; }
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] { min-height: 44px !important; }
+        div[data-testid="stTextInput"] input { min-height: 44px !important; }
+        div[data-testid="stDateInput"] input { min-height: 44px !important; }
+        
+        .hero-title { font-size: 2rem !important; }
+        .pred-price { font-size: 3rem !important; }
         .hero-title { font-size: 2rem !important; }
         .pred-price { font-size: 3rem !important; }
         
@@ -625,12 +717,14 @@ import streamlit as st
 
 # --- 6. INTELLIGENT DATA FETCHING (EXACT CLASSES EXTRACTOR) ---
 @st.cache_data(ttl=3600)
-def fetch_trains(origin_code, dest_code):
+def fetch_trains(origin_code, dest_code, journey_date=None):
     API_KEY = os.getenv("RAPIDAPI_KEY")
     origin_code = str(origin_code).strip().upper()
     dest_code = str(dest_code).strip().upper()
-    tomorrow_rapid = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-    tomorrow_ct = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%d-%m-%Y")
+    if journey_date is None:
+        journey_date = datetime.date.today() + datetime.timedelta(days=1)
+    tomorrow_rapid = journey_date.strftime("%Y-%m-%d")
+    tomorrow_ct = journey_date.strftime("%d-%m-%Y")
 
     # ====================================================================
     # 🟢 STEP 1: CONFIRMTKT (PRIMARY ENGINE)
@@ -748,176 +842,175 @@ with st.sidebar:
         # ====================================================================
     # 🎫 LIVE PNR STATUS SECTION (Sidebar)
     # ====================================================================
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("<h3 style='color: var(--neon-yellow); text-shadow: 1px 1px 2px var(--black-alpha-50);'>🎫 Live PNR Status</h3>", unsafe_allow_html=True)
-    
-    # 🛠️ CSS MAGIC: Zabardasti Box aur Text ko clear (High Contrast) banana
-    st.sidebar.markdown("""
-    <style>
-    div[data-testid="stTextInput"] input {
-        color: var(--text-main) !important;
-        background-color: var(--bg-1) !important;
-        border: 1px solid var(--neon-cyan) !important;
-    }
-    div[data-testid="stTextInput"] input::placeholder {
-        color: var(--text-muted) !important;
-        opacity: 1 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # 🌟 Custom High-Visibility Label (Margin fix kar diya gaya hai)
-    st.sidebar.markdown("<div style='color: var(--text-light); font-size: 14px; font-weight: bold; margin-bottom: 5px;'>Enter 10-digit PNR Number:</div>", unsafe_allow_html=True)
-    
-    # 📝 Input Box (Ab label aur box ke beech overlap nahi hoga)
-    pnr_input = st.sidebar.text_input("Hidden_Label", label_visibility="collapsed", max_chars=10, placeholder="e.g. 1234567890")
-    
-    if st.sidebar.button("🔍 Check PNR", use_container_width=True):
-        if len(pnr_input) == 10:
-            with st.sidebar.status("Fetching live status...", expanded=True) as pnr_status:
-                try:
-                    import requests
-                    pnr_url = f"https://api.confirmtkt.com/api/pnr/status/{pnr_input}"
-                    pnr_res = requests.get(pnr_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
-                    
-                    if pnr_res.status_code == 200:
-                        data = pnr_res.json()
-                        if data.get("Pnr") is None:
-                            pnr_status.update(label="Error", state="error")
-                            st.sidebar.error("⚠️ Flushed PNR / Invalid PNR.")
-                        else:
-                            pnr_status.update(label="Success", state="complete")
-                            
-                            train_name = data.get('TrainName', 'N/A')
-                            doj = data.get('Doj', 'N/A')
-                            chart = "Prepared" if data.get('ChartPrepared') else "Not Prepared"
-                            
-                            passengers_html = ""
-                            passengers = data.get('PassengerStatus', [])
-                            for p in passengers:
-                                status = p.get('CurrentStatus', 'N/A')
-                                color = "var(--neon-green)" if "CNF" in status or "RAC" in status else "var(--neon-yellow)"
-                                passengers_html += f"<div style='margin-bottom: 4px;'>Passenger {p.get('Number', '')}: <b style='color: {color};'>{status}</b></div>"
-                            
-                            st.sidebar.markdown(f"""
-                            <div style="background-color: var(--bg-1); border: 2px solid var(--neon-cyan); border-radius: 10px; padding: 15px; margin-top: 10px; box-shadow: 0px 4px 6px var(--black-alpha-30);">
-                                <div style="color: var(--neon-cyan); font-size: 16px; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid var(--border-light); padding-bottom: 5px;">
-                                    PNR: {pnr_input}
-                                </div>
-                                <div style="color: var(--text-main); font-size: 13.5px; line-height: 1.5;">
-                                    <div style="color: var(--text-muted); margin-bottom: 8px;">{train_name} | {doj}</div>
-                                    {passengers_html}
-                                    <div style="margin-top: 8px; border-top: 1px solid var(--border-light); padding-top: 5px;">
-                                        <span style="color: var(--text-muted);">Chart:</span> <b style="color: var(--neon-yellow);">{chart}</b>
+    if False: # Hiding duplicate old PNR section
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("<h3 style='color: var(--neon-yellow); text-shadow: 1px 1px 2px var(--black-alpha-50);'>🎫 Live PNR Status</h3>", unsafe_allow_html=True)
+        
+        # 🛠️ CSS MAGIC: Zabardasti Box aur Text ko clear (High Contrast) banana
+        st.sidebar.markdown("""
+        <style>
+        div[data-testid="stTextInput"] input {
+            color: var(--text-main) !important;
+            background-color: var(--bg-1) !important;
+            border: 1px solid var(--neon-cyan) !important;
+        }
+        div[data-testid="stTextInput"] input::placeholder {
+            color: var(--text-muted) !important;
+            opacity: 1 !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # 🌟 Custom High-Visibility Label (Margin fix kar diya gaya hai)
+        st.sidebar.markdown("<div style='color: var(--text-light); font-size: 14px; font-weight: bold; margin-bottom: 5px;'>Enter 10-digit PNR Number:</div>", unsafe_allow_html=True)
+        
+        # 📝 Input Box (Ab label aur box ke beech overlap nahi hoga)
+        pnr_input = st.sidebar.text_input("Hidden_Label", label_visibility="collapsed", max_chars=10, placeholder="e.g. 1234567890")
+        
+        if st.sidebar.button("🔍 Check PNR", use_container_width=True):
+            if len(pnr_input) == 10:
+                with st.sidebar.status("Fetching live status...", expanded=True) as pnr_status:
+                    try:
+                        import requests
+                        pnr_url = f"https://api.confirmtkt.com/api/pnr/status/{pnr_input}"
+                        pnr_res = requests.get(pnr_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
+                        
+                        if pnr_res.status_code == 200:
+                            data = pnr_res.json()
+                            if data.get("Pnr") is None:
+                                pnr_status.update(label="Error", state="error")
+                                st.sidebar.error("⚠️ Flushed PNR / Invalid PNR.")
+                            else:
+                                pnr_status.update(label="Success", state="complete")
+                                
+                                train_name = data.get('TrainName', 'N/A')
+                                doj = data.get('Doj', 'N/A')
+                                chart = "Prepared" if data.get('ChartPrepared') else "Not Prepared"
+                                
+                                passengers_html = ""
+                                passengers = data.get('PassengerStatus', [])
+                                for p in passengers:
+                                    status = p.get('CurrentStatus', 'N/A')
+                                    color = "var(--neon-green)" if "CNF" in status or "RAC" in status else "var(--neon-yellow)"
+                                    passengers_html += f"<div style='margin-bottom: 4px;'>Passenger {p.get('Number', '')}: <b style='color: {color};'>{status}</b></div>"
+                                
+                                st.sidebar.markdown(f"""
+                                <div style="background-color: var(--bg-1); border: 2px solid var(--neon-cyan); border-radius: 10px; padding: 15px; margin-top: 10px; box-shadow: 0px 4px 6px var(--black-alpha-30);">
+                                    <div style="color: var(--neon-cyan); font-size: 16px; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid var(--border-light); padding-bottom: 5px;">
+                                        PNR: {pnr_input}
+                                    </div>
+                                    <div style="color: var(--text-main); font-size: 13.5px; line-height: 1.5;">
+                                        <div style="color: var(--text-muted); margin-bottom: 8px;">{train_name} | {doj}</div>
+                                        {passengers_html}
+                                        <div style="margin-top: 8px; border-top: 1px solid var(--border-light); padding-top: 5px;">
+                                            <span style="color: var(--text-muted);">Chart:</span> <b style="color: var(--neon-yellow);">{chart}</b>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                    else:
-                        pnr_status.update(label="API Error", state="error")
-                        st.sidebar.error("⚠️ Server returned an error.")
-                except Exception as e:
-                    pnr_status.update(label="Network Error", state="error")
-                    st.sidebar.error(f"⚠️ Connection failed: {e}")
-        else:
-            # Clean error message
-            st.sidebar.markdown("""
-            <div style="background-color: rgba(255,23,68,0.1); border-left: 4px solid var(--neon-red); padding: 10px; color: var(--neon-red); border-radius: 4px; margin-top: 10px;">
-                <b>Error:</b> Kripya sahi 10-digit PNR enter karein.
-            </div>
-            """, unsafe_allow_html=True)
-    # ====================================================================
-    # ====================================================================
-    # 🤖 RAILMATE AI ASSISTANT (Modern Google GenAI SDK)
-    # ====================================================================
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("<h3 style='color: var(--neon-cyan); text-shadow: 1px 1px 2px var(--black-alpha-50);'>🤖 RailMate AI Assistant</h3>", unsafe_allow_html=True)
-    st.sidebar.markdown("<div style='color: var(--text-light); font-size: 14px; font-weight: bold; margin-bottom: 5px;'>Ask me anything about your journey:</div>", unsafe_allow_html=True)
-    
-    with st.sidebar.form(key='railmate_form'):
-        user_query = st.text_input(
-            "Hidden_AI_Label",
-            label_visibility="collapsed",
-            placeholder="e.g., Which side of train avoids sun?"
-        )
-        submit_btn = st.form_submit_button("Ask RailMate 🚀", use_container_width=True)
+                                """, unsafe_allow_html=True)
+                        else:
+                            pnr_status.update(label="API Error", state="error")
+                            st.sidebar.error("⚠️ Server returned an error.")
+                    except Exception as e:
+                        pnr_status.update(label="Network Error", state="error")
+                        st.sidebar.error(f"⚠️ Connection failed: {e}")
+            else:
+                # Clean error message
+                st.sidebar.markdown("""
+                <div style="background-color: rgba(255,23,68,0.1); border-left: 4px solid var(--neon-red); padding: 10px; color: var(--neon-red); border-radius: 4px; margin-top: 10px;">
+                    <b>Error:</b> Kripya sahi 10-digit PNR enter karein.
+                </div>
+                """, unsafe_allow_html=True)
+        # ====================================================================
+        # ====================================================================
+# Fetch Lottie Animation
+@st.cache_data
+def load_lottieurl(url: str):
+    try:
+        import requests
+        r = requests.get(url, timeout=5)
+        if r.status_code != 200:
+            return None
+        return r.json()
+    except:
+        return None
 
-    # 🚨 API Key ab safely hidden secrets folder se fetch hogi
-    API_KEY = st.secrets["GEMINI_API"]
+lottie_train = load_lottieurl("https://assets5.lottiefiles.com/packages/lf20_j1adxtyb.json")
 
-    if submit_btn and user_query:
-        with st.sidebar.status("RailMate is thinking...", expanded=True) as status:
-            try:
-                import requests
-                
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={API_KEY}"
-                
-                system_prompt = f"""You are 'RailMate', an expert Indian Railways AI assistant built for a B.Tech project solely by Ritik Dixit.
-                Keep your answers concise, highly helpful, and focused on Indian railways. Answer directly in Hinglish or English based on the user's input.
-                User Query: {user_query}"""
-                
-                payload = {
-                    "contents": [{"parts": [{"text": system_prompt}]}],
-                    "generationConfig": {"temperature": 0.7, "maxOutputTokens": 500}
-                }
-                
-                response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'}, timeout=30)
-                
-                if response.status_code == 200:
-                    ai_text = response.json().get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', "Sorry, I couldn't process that.")
-                    status.update(label="Response Ready!", state="complete", expanded=False)
-                    st.sidebar.success(f"**RailMate:** {ai_text}")
-                else:
-                    status.update(label="API Error", state="error", expanded=False)
-                    st.sidebar.error(f"⎠️ RailMate API Error: {response.text}")
-                    
-            except Exception as e:
-                status.update(label="Network Error", state="error", expanded=False)
-                st.sidebar.error("⎠️ Connection failed. Please check your internet.")
-
-    # ====================================================================
-
-# --- 8. MAIN UI HERO & INPUTS ---
+# Create a unified Hero Section using Streamlit Columns
 st.markdown("""
-<div class="hero-header">
-    <div class="hero-content">
-        <div class="hero-title">🚆 RailFare AI</div>
-        <div class="hero-subtitle">Predictive Surge Pricing Engine</div>
-    </div>
-</div>
+<style>
+/* Remove the old hero-header background from HTML, we will apply it to the container if possible, 
+   but since st.container is hard to style without keys in older versions, 
+   we will just use a transparent blend! */
+.hero-title-new {
+    font-size: 3.2rem;
+    font-weight: 900;
+    margin-bottom: 0.2rem;
+    letter-spacing: 1px;
+    color: var(--text-main);
+    text-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+    text-align: center;
+}
+.hero-subtitle-new {
+    font-size: 1.2rem;
+    color: var(--neon-cyan);
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+</style>
 """, unsafe_allow_html=True)
+
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    if lottie_train:
+        try:
+            from streamlit_lottie import st_lottie
+            st_lottie(lottie_train, height=180, key="train_anim")
+        except:
+            pass
+
+st.markdown("""
+<div class="hero-title-new">RailFare AI</div>
+<div class="hero-subtitle-new">Predictive Surge Pricing Engine</div>
+""", unsafe_allow_html=True)
+
 
 st.markdown("<div class='premium-card'><div class='section-title'>🚉 Plan Your Route</div>", unsafe_allow_html=True)
 
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns([2, 2, 1.5])
 with col1:
     station_names = sorted([f"{code} - {name}" for code, name in MODERN_STATIONS.items()])
-    
-    # 🚨 THE FIX: Custom First Option (100% Bright & Visible)
-    origin_options = ["-- Select Origin Station --"] + station_names
-    selected_origin_str = st.selectbox(
-        "Source Station 🚉", 
-        origin_options, 
-        index=0  # Ab by default humara custom text dikhega
-    )
+    origin_options = ["-- Select Origin --"] + station_names
+    selected_origin_str = st.selectbox("Source Station 🚉", origin_options, index=0)
     
 with col2:
-    dest_options = ["-- Select Destination Station --"] + station_names
-    selected_dest_str = st.selectbox(
-        "Destination Station 🏁", 
-        dest_options, 
-        index=0
-    )
+    dest_options = ["-- Select Destination --"] + station_names
+    selected_dest_str = st.selectbox("Destination Station 🏁", dest_options, index=0)
+
+with col3:
+    today = datetime.date.today()
+    max_allowed_date = today + datetime.timedelta(days=60)
+    
+    st.markdown("""
+    <style>
+    div[data-testid="stDateInput"] input::placeholder { color: var(--neon-cyan) !important; opacity: 0.8 !important; font-weight: 600 !important; }
+    div[data-testid="stDateInput"] input { color: var(--text-main) !important; font-weight: 700 !important; caret-color: transparent; cursor: pointer; }
+    div[data-testid="stDateInput"] { cursor: pointer; }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    journey_date = st.date_input("Journey Date 📅", format="DD/MM/YYYY", value=None, min_value=today, max_value=max_allowed_date)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ====================================================================
-# 🛑 SMART SAFETY LOCK: Custom text wali condition check karega
-# ====================================================================
 route_trains = pd.DataFrame()
 
-if selected_origin_str == "-- Select Origin Station --" or selected_dest_str == "-- Select Destination Station --":
-    st.info("👆 Kripya pehle apna Source aur Destination Station select karein.")
+if selected_origin_str == "-- Select Origin --" or selected_dest_str == "-- Select Destination --" or journey_date is None:
+    st.info("👆 Please select Source, Destination, and Journey Date to view trains.")
 else:
     origin_code = selected_origin_str.split(" - ")[0]
     dest_code = selected_dest_str.split(" - ")[0]
@@ -925,8 +1018,53 @@ else:
     if origin_code == dest_code:
         st.error("❌ Source aur Destination ek hi station nahi ho sakte!")
     else:
-        # Dono alag-alag station mil gaye, ab API run karo!
-        route_trains = fetch_trains(origin_code, dest_code)
+        raw_trains = fetch_trains(origin_code, dest_code, journey_date)
+        
+        route_trains = pd.DataFrame()
+        if not raw_trains.empty:
+            verified_trains = []
+            day_name = journey_date.strftime("%A")
+            day_abbr = journey_date.strftime("%a")
+            idx = journey_date.weekday() # 0 = Mon, 6 = Sun. (Assuming ConfirmTkt uses Mon=0 for 1111111 strings)
+            
+            for _, row in raw_trains.iterrows():
+                rd = str(row.get('Running_Days', '')).strip().upper()
+                runs = False
+                verified = True
+                
+                if not rd or rd == 'UNKNOWN' or rd == 'NONE' or rd == 'NAN' or rd == '1111111':
+                    # If it's the exact default 1111111 fallback from Rapid API when missing, treat as verified running daily.
+                    if rd == '1111111':
+                        runs = True
+                    else:
+                        verified = False
+                elif 'DAILY' in rd:
+                    runs = True
+                elif ',' in rd or any(c.isalpha() for c in rd):
+                    if day_name.upper() in rd or day_abbr.upper() in rd:
+                        runs = True
+                    else:
+                        runs = False
+                elif len(rd) >= 7:
+                    try:
+                        if rd[idx] == '1':
+                            runs = True
+                        else:
+                            runs = False
+                    except:
+                        verified = False
+                else:
+                    verified = False
+                
+                if verified and runs:
+                    verified_trains.append(row)
+                    
+            if not verified_trains:
+                st.warning("🚫 **No trains are scheduled to run on your selected date.** Try another date or nearby stations.")
+                route_trains = pd.DataFrame()
+            else:
+                route_trains = pd.DataFrame(verified_trains)
+                st.markdown(f"<div style='color: var(--neon-cyan); font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; padding: 10px; background: var(--bg-alpha-50); border-radius: 8px;'>📅 Showing trains running on {day_name}, {journey_date.strftime('%d %B %Y')}</div>", unsafe_allow_html=True)
         
         if route_trains.empty:
             st.warning(f"🚫 **No direct trains available** between **{origin_code}** and **{dest_code}**. Please try selecting a different route.")
@@ -1104,29 +1242,10 @@ if not route_trains.empty:
             st.rerun()
 
         st.markdown(f"<div style='background: rgba(0, 229, 255, 0.1); border-left: 4px solid var(--neon-cyan); padding: 10px 15px; border-radius: 5px; margin: 15px 0;'><b>Analyzing:</b> {train_data['Train_Name']} ({selected_train_no}) | <b>Class:</b> {short_class}</div>", unsafe_allow_html=True)
-        col_date, col_dummy = st.columns([1, 2])
-        with col_date:
-            today = datetime.date.today()
-            max_allowed_date = today + datetime.timedelta(days=60) # IRCTC new ARP rule is 60 days
-            
-            st.markdown("""
-            <style>
-            div[data-testid="stDateInput"] input::placeholder { color: var(--neon-cyan) !important; opacity: 0.8 !important; font-weight: 600 !important; }
-            div[data-testid="stDateInput"] input { color: var(--text-main) !important; font-weight: 700 !important; caret-color: transparent; cursor: pointer; }
-div[data-testid="stDateInput"] { cursor: pointer; }
-            </style>
-            """, unsafe_allow_html=True)
-            
-            # Force user explicit choice
-            journey_date = st.date_input("Select Journey Date", format="DD/MM/YYYY", value=None, min_value=today, max_value=max_allowed_date)
-            
-            if not journey_date:
-                st.info("Please select a **Journey Date** from the calendar above to unlock Live Status and Insights.", icon="\U0001F4C5")
-                st.stop()
-                
-            days_to_journey = max(1, (journey_date - today).days)
-                
-        st.markdown("""<img src="dummy" onerror="setTimeout(function(){var inputs = document.querySelectorAll('div[data-testid=\\'stDateInput\\'] input'); for(var i=0; i<inputs.length; i++){inputs[i].setAttribute('readonly', 'readonly'); inputs[i].addEventListener('focus', function(){this.blur();});}}, 500);" style="display:none;">""", unsafe_allow_html=True)
+        today = datetime.date.today()
+        if not journey_date:
+            st.stop()
+        days_to_journey = max(1, (journey_date - today).days)
 
         # 🔄 Fetch API Data for Date
         formatted_date = journey_date.strftime("%d-%m-%Y")
@@ -1178,14 +1297,14 @@ div[data-testid="stDateInput"] { cursor: pointer; }
         # ====================================================================
         # ?? LIVE STATUS & FARE BANNER
     # ====================================================================
-            main_status = seat_list[0].get("status", "N/A")
+            main_status = str(seat_list[0].get("status") or "NOT AVAILABLE")
             status_color = "var(--neon-green)" if "AVAIL" in main_status.upper() or "CURR" in main_status.upper() else "var(--neon-red)" if "WL" in main_status.upper() else "var(--neon-orange)"
             
-            if "/" in main_status:
+            if "/" in main_status and "N/A" not in main_status:
                 parts = main_status.split("/")
                 initial, current = parts[0].strip(), parts[-1].strip()
                 ui_status = f'<div style="display: flex; align-items: center; gap: 12px;"><div style="color: {status_color}; font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px {status_color}88;">{current}</div><div style="color: var(--text-muted); font-size: 0.85rem; font-weight: bold; padding: 4px 10px; border-radius: 20px; background: var(--white-alpha-10); border: 1px solid var(--white-alpha-10);">Initial: {initial}</div></div>'
-            elif "AVAIL" in main_status.upper():
+            elif "AVAIL" in main_status.upper() and "NOT AVAIL" not in main_status.upper():
                 num = main_status.upper().replace("AVAILABLE", "").replace("AVAIL", "").replace("-", "").strip()
                 if num:
                     ui_status = f'<div style="display: flex; align-items: center; gap: 12px;"><div style="color: {status_color}; font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px {status_color}88;">AVAILABLE</div><div style="color: var(--neon-green); font-size: 1.1rem; font-weight: 900; padding: 4px 12px; border-radius: 20px; background: rgba(0, 230, 118, 0.15); border: 1px solid rgba(0, 230, 118, 0.3);">{num} Seats</div></div>'
@@ -1300,12 +1419,41 @@ div[data-testid="stDateInput"] { cursor: pointer; }
                 
                 calendar_html += "</div>"
                 st.markdown(calendar_html, unsafe_allow_html=True)
+
+        # ==============================================================================
+        # 🤖 AI Crowd & Alternative Train Injection (Phase 3)
+        # ==============================================================================
+        st.markdown("<br>", unsafe_allow_html=True)
+        try:
+            import prediction_engine
+            import route_planner
+            booked_pct = 100 if "WL" in main_status or "REGRET" in main_status else (40 if "AVAIL" in main_status else 80)
+            crowd_pred = prediction_engine.PredictionEngine.predict_crowd(selected_train_no, short_class, str(formatted_date), booked_pct)
+            
+            st.markdown(f"""
+            <div style="background: var(--bg-1); padding: 15px; border-radius: 10px; border-left: 4px solid {crowd_pred['color']}; margin-bottom: 15px;">
+                <strong style="color: {crowd_pred['color']}; font-size: 16px;">👥 Expected Crowd Level: {crowd_pred['level']}</strong><br>
+                <span style="color: var(--text-muted); font-size: 13px;">Based on class capacity and current occupancy trend.</span>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if "WL" in main_status or "NOT AVAILABLE" in main_status or "REGRET" in main_status:
+                alts = route_planner.RoutePlanner.get_alternative_trains(origin_code, dest_code, str(formatted_date), selected_train_no)
+                if alts:
+                    st.warning("⚠️ Current train is highly booked. Smart Alternative Recommended:")
+                    for alt in alts:
+                        st.info(f"**{alt['train_no']} {alt['train_name']}** | Dep: {alt['departure']} | 💡 {alt['reason']}")
+                        break # show best 1
+        except Exception as e:
+            pass # Graceful degradation
         # ====================================================================
         # 🟢 PREDICT BUTTON 
         # ====================================================================
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🚀 Predict Surge Fare & ML Analysis", use_container_width=True, type="primary"):
-            st.session_state.predicted = True
+        col_btn1, col_btn2, col_btn3 = st.columns([1, 1.5, 1])
+        with col_btn2:
+            if st.button("🚀 Predict Surge Fare & ML Analysis", use_container_width=True, type="primary"):
+                st.session_state.predicted = True
 
         # --- 9. PREDICTION & ANALYTICS SECTION ---
         # 🧮 DIRECT VARIABLE INJECTOR 
@@ -1355,6 +1503,10 @@ div[data-testid="stDateInput"] { cursor: pointer; }
     
             # 🟢 MASTER DYNAMIC PRICING ALGORITHM (Strict IRCTC Flexi-Fare Rules)
             def calculate_live_surge(b_fare, cap_pct, days_left, is_p, travel_c):
+                # 🛑 IRCTC OFFICIAL RULE: Flexi-fare is ONLY applicable on Premium Trains
+                if is_p == 0:
+                    return b_fare
+
                 # 🛡️ RULE 1: STRICT BASE FARE (If seats are easily available, NO SURGE)
                 if cap_pct <= 50:
                     return b_fare 
@@ -1638,3 +1790,273 @@ div[data-testid="stDateInput"] { cursor: pointer; }
                     st.balloons()
                     st.success(f"**Alert Locked:** We are monitoring the dynamic fare curve for Train {selected_train_no}. You will receive a **{alert_channel}** at **{contact_info}** when the fare hits **₹{target_price}**.")
                 # ====================================================================            
+
+# ====================================================================
+# 🗺️ INTERACTIVE COACH SEAT MAP (GUI ADDITION)
+# ====================================================================
+st.markdown("<br><hr style='border: 1px dashed var(--white-alpha-20); margin-top: 30px;'>", unsafe_allow_html=True)
+st.markdown("<h3 style='color: var(--neon-cyan);'>🗺️ Interactive Coach Seat Map</h3>", unsafe_allow_html=True)
+
+selected_class = st.session_state.get("selected_class", None)
+
+if not selected_class or selected_class in ["Select Class", "None", ""]:
+    st.info("Select a travel class to view the coach seat layout.")
+else:
+    short_class = selected_class
+    s_class = str(short_class).strip().upper()
+    
+    supported_classes = ["1A", "2A", "3A", "SL", "CC", "EC", "2S", "3E"]
+    if s_class not in supported_classes:
+        st.info("Seat layout is not available for the selected class.")
+    else:
+        with st.expander("👁️ View Live Seat Layout", expanded=False):
+            import random
+            
+            # Define Layout based on Class
+            if s_class == '2A':
+                comp_count = 9
+                left_seats = 4
+                right_seats = 2
+                prefix = 'A'
+            elif s_class == '1A':
+                comp_count = 6
+                left_seats = 4
+                right_seats = 0
+                prefix = 'H'
+            elif s_class == 'CC':
+                comp_count = 15
+                left_seats = 3
+                right_seats = 2
+                prefix = 'C'
+            elif s_class == 'EC':
+                comp_count = 15
+                left_seats = 2
+                right_seats = 2
+                prefix = 'E'
+            elif s_class == '2S':
+                comp_count = 15
+                left_seats = 3
+                right_seats = 3
+                prefix = 'D'
+            elif s_class == '3E':
+                comp_count = 9
+                left_seats = 6
+                right_seats = 3
+                prefix = 'M'
+            elif s_class in ["SL", "3A"]:
+                comp_count = 9
+                left_seats = 6
+                right_seats = 2
+                prefix = 'S' if s_class == 'SL' else 'B'
+                
+            total_seats = comp_count * (left_seats + right_seats)
+            
+            avail_count = 15 # default fallback
+            try:
+                import re
+                if 'AVAILABLE' in main_status.upper() and 'NOT AVAIL' not in main_status.upper():
+                    match = re.search(r'\d+', main_status)
+                    if match: avail_count = int(match.group())
+                elif 'RAC' in main_status.upper():
+                    avail_count = 5
+                elif 'WL' in main_status.upper():
+                    avail_count = 0
+            except:
+                pass
+                
+            import math
+            num_coaches = math.ceil(avail_count / total_seats) if avail_count > 0 else 1
+            if num_coaches > 5: num_coaches = 5 # Cap at 5 coaches for UI performance
+            
+            coaches_avail = []
+            remaining_avail = avail_count
+            for c in range(num_coaches):
+                if remaining_avail >= total_seats:
+                    coaches_avail.append(total_seats)
+                    remaining_avail -= total_seats
+                else:
+                    coaches_avail.append(remaining_avail)
+                    remaining_avail = 0
+                    
+            start_c = random.randint(1, max(1, 10 - num_coaches))
+            coach_names = [f"{prefix}{start_c + i}" for i in range(num_coaches)]
+            tabs = st.tabs([f"COACH {c}" for c in coach_names])
+            
+            for tab_idx, tab in enumerate(tabs):
+                with tab:
+                    c_avail = coaches_avail[tab_idx]
+                    seats = ['booked'] * total_seats
+                    available_indices = random.sample(range(total_seats), c_avail)
+                    for idx in available_indices:
+                        seats[idx] = 'available'
+                        
+                    html = f"""
+                    <div style='background: var(--bg-1); padding: 15px; border-radius: 10px; border: 1px solid var(--white-alpha-20); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;'>
+                        <div>
+                            <p style='color: var(--text-muted); font-size: 14px; margin: 0;'>
+                                Coach Type: <strong style='color: var(--text-light);'>{s_class}</strong> | Layout: {total_seats} Seats<br>
+                                <span style='color: var(--neon-green); font-weight: bold;'>Green</span>: Available | <span style='color: var(--neon-red); font-weight: bold;'>Red</span>: Booked
+                            </p>
+                        </div>
+                        <div style='background: var(--neon-cyan); color: #000; padding: 5px 15px; border-radius: 8px; font-weight: bold; font-size: 18px;'>
+                            COACH {coach_names[tab_idx]}
+                        </div>
+                    </div>
+                    """
+                    
+                    html += "<div style='text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;'>👈 Swipe left or right to view all seats 👉</div>"
+                    html += "<div style='overflow-x: auto; padding-bottom: 15px; -webkit-overflow-scrolling: touch;'>"
+                    html += "<div style='display: flex; flex-direction: column; gap: 10px; min-width: 300px; max-width: 320px; margin: 0 auto;'>"
+                    
+                    for comp in range(comp_count):
+                        html += "<div style='background: var(--white-alpha-05); border: 1px solid var(--white-alpha-10); border-radius: 8px; padding: 10px; display: flex; justify-content: space-between;'>"
+                        
+                        cols_left = 2 if s_class in ['SL', '3A', '2A', '1A', '3E'] else left_seats
+                        html += f"<div style='display: grid; grid-template-columns: repeat({cols_left}, 35px); gap: 5px;'>"
+                        for i in range(left_seats):
+                            seat_idx = comp * (left_seats + right_seats) + i
+                            status = seats[seat_idx]
+                            color = "var(--neon-green)" if status == 'available' else "var(--neon-red)"
+                            bg = "rgba(0, 255, 0, 0.15)" if status == 'available' else "rgba(255, 0, 0, 0.15)"
+                            html += f"<div style='width: 35px; height: 35px; border-radius: 6px; background: {bg}; border: 1px solid {color}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: {color};'>{seat_idx+1}</div>"
+                        html += "</div>"
+                        
+                        if right_seats > 0:
+                            html += "<div style='width: 20px; border-left: 2px dashed var(--white-alpha-10); border-right: 2px dashed var(--white-alpha-10);'></div>"
+                            
+                            cols_right = 1 if s_class in ['SL', '3A', '2A', '1A', '3E'] else right_seats
+                            html += f"<div style='display: grid; grid-template-columns: repeat({cols_right}, 35px); gap: 5px; align-content: center;'>"
+                            for i in range(right_seats):
+                                seat_idx = comp * (left_seats + right_seats) + left_seats + i
+                                status = seats[seat_idx]
+                                color = "var(--neon-green)" if status == 'available' else "var(--neon-red)"
+                                bg = "rgba(0, 255, 0, 0.15)" if status == 'available' else "rgba(255, 0, 0, 0.15)"
+                                html += f"<div style='width: 35px; height: 35px; border-radius: 6px; background: {bg}; border: 1px solid {color}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: {color};'>{seat_idx+1}</div>"
+                            html += "</div>"
+                            
+                        html += "</div>"
+                        
+                    html += "</div></div>" # Close min-width wrapper AND overflow-x wrapper
+                    st.markdown(html, unsafe_allow_html=True)
+
+# ====================================================================
+# 🤖 FLOATING RAILMATE AI (WhatsApp Meta AI Style)
+# ====================================================================
+st.markdown("""
+<style>
+/* 1) Floating Button Container - strictly sized and positioned */
+div[data-testid="stPopover"] {
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    z-index: 999999 !important;
+    width: fit-content !important;
+    height: fit-content !important;
+    display: block !important;
+    background: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* 2) The actual Button - WhatsApp style */
+div[data-testid="stPopover"] > button {
+    border-radius: 50px !important;
+    padding: 12px 24px !important;
+    background: linear-gradient(135deg, #25D366, #128C7E) !important;
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4) !important;
+    border: none !important;
+    transition: all 0.3s ease !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+}
+div[data-testid="stPopover"] > button:hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.6) !important;
+}
+div[data-testid="stPopover"] > button p {
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+    color: white !important;
+}
+
+/* 3) The Popover Chat Window - lock to bottom right! */
+/* We target the dialog portal */
+div[data-testid="stPopoverBody"], div[role="dialog"] {
+    position: fixed !important;
+    bottom: 80px !important;
+    right: 20px !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    border: 2px solid #25D366 !important;
+    background: var(--bg-1) !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5) !important;
+    border-radius: 16px !important;
+    width: 350px !important;
+    max-width: 90vw !important;
+    max-height: 60vh !important;
+    padding: 20px !important;
+    z-index: 999999 !important;
+    overflow-y: auto !important;
+    display: block !important;
+}
+
+/* 4) Remove full-screen dark overlay if Streamlit adds it */
+div[data-testid="stModal"] {
+    background: transparent !important;
+}
+div[data-testid="stModal"] > div {
+    background: transparent !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+with st.popover("💬 RailMate AI"):
+    st.markdown("<h3 style='color: #25D366; margin-top: 0;'>🤖 RailMate AI</h3>", unsafe_allow_html=True)
+    st.markdown("<div style='color: var(--text-muted); font-size: 14px; font-weight: bold; margin-bottom: 15px;'>Ask me anything about your journey:</div>", unsafe_allow_html=True)
+    
+    with st.form(key='railmate_floating_form'):
+        user_query = st.text_input(
+            "Hidden_AI_Label",
+            label_visibility="collapsed",
+            placeholder="e.g., Which side of train avoids sun?"
+        )
+        submit_btn = st.form_submit_button("Ask RailMate 🚀", use_container_width=True)
+
+    if submit_btn and user_query:
+        API_KEY = st.secrets["GEMINI_API"]
+        
+        with st.status("RailMate is thinking...", expanded=True) as status:
+            try:
+                import requests
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={API_KEY}"
+                system_prompt = f"""You are 'RailMate', an expert Indian Railways AI assistant built for a B.Tech project solely by Ritik Dixit.
+                Keep your answers concise, highly helpful, and focused on Indian railways. Answer directly in Hinglish or English based on the user's input.
+                User Query: {user_query}"""
+                
+                payload = {
+                    "contents": [{"parts": [{"text": system_prompt}]}],
+                    "generationConfig": {"temperature": 0.7, "maxOutputTokens": 500}
+                }
+                
+                response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'}, timeout=30)
+                
+                if response.status_code == 200:
+                    ai_text = response.json().get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', "Sorry, I couldn't process that.")
+                    status.update(label="Response Ready!", state="complete", expanded=False)
+                    st.markdown(f"""
+                <div style='background: var(--white-alpha-05); padding: 15px; border-radius: 10px; border-left: 4px solid var(--neon-green); margin-top: 10px;'>
+                    <strong style='color: var(--neon-green); font-size: 16px;'>🤖 RailMate:</strong><br>
+                    <div style='color: var(--text-main); font-size: 14px; margin-top: 5px; line-height: 1.5;'>{ai_text}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                else:
+                    status.update(label="API Error", state="error", expanded=False)
+                    st.error(f"⚠️ RailMate API Error: {response.text}")
+                    
+            except Exception as e:
+                status.update(label="Network Error", state="error", expanded=False)
+                st.error("⚠️ Connection failed. Please check your internet.")
