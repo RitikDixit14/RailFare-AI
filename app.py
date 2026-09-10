@@ -2165,7 +2165,7 @@ st.markdown("""
 /* 1) Floating Button Container - strictly sized and positioned */
 div[data-testid="stPopover"] {
     position: fixed !important;
-    bottom: 20px !important;
+    bottom: 90px !important;
     right: 20px !important;
     z-index: 999999 !important;
     width: fit-content !important;
@@ -2204,7 +2204,7 @@ div[data-testid="stPopover"] > button p {
 /* We target the dialog portal */
 div[data-testid="stPopoverBody"], div[role="dialog"] {
     position: fixed !important;
-    bottom: 80px !important;
+    bottom: 150px !important;
     right: 20px !important;
     top: auto !important;
     left: auto !important;
