@@ -948,16 +948,121 @@ def render_train_animation():
         animation: scrollTrack 2s linear infinite;
         z-index: 1;
     }
-    .train-emoji {
+    
+    .css-train {
         position: absolute;
-        bottom: 12px;
-        font-size: 4.5rem;
-        line-height: 1;
-        filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.4));
-        animation: moveTrain 10s linear infinite;
+        bottom: 18.5px; /* sit on track */
+        display: flex;
+        align-items: flex-end;
+        gap: 4px;
+        animation: moveTrain 12s linear infinite;
         z-index: 2;
-        white-space: nowrap;
     }
+    
+    .css-coach {
+        width: 70px;
+        height: 35px;
+        background: #1976D2; /* LHB coach blue */
+        border-radius: 4px;
+        position: relative;
+        border: 2px solid #0D47A1;
+        box-shadow: inset 0 -4px 0 rgba(0,0,0,0.2);
+    }
+    .css-coach::before {
+        content: '';
+        position: absolute;
+        top: 6px;
+        left: 5px;
+        width: 56px;
+        height: 10px;
+        background: repeating-linear-gradient(90deg, #bbdefb 0%, #bbdefb 10px, transparent 10px, transparent 14px);
+    }
+    .css-coach::after {
+        content: '';
+        position: absolute;
+        bottom: 5px;
+        left: 5px;
+        width: 56px;
+        height: 3px;
+        background: #ffeb3b; /* yellow stripe */
+    }
+    
+    .css-engine {
+        width: 80px;
+        height: 45px;
+        background: #d32f2f; /* WAP-4 or WAP-7 red/white */
+        border-radius: 4px 20px 4px 4px; /* Slanted right side */
+        position: relative;
+        border: 2px solid #b71c1c;
+        box-shadow: inset 0 -4px 0 rgba(0,0,0,0.2);
+    }
+    .css-engine::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        right: 12px; /* Window on the right (front) */
+        width: 15px;
+        height: 12px;
+        background: #bbdefb;
+        border-radius: 2px 8px 2px 2px;
+    }
+    .css-engine::after { /* Headlight glow */
+        content: '';
+        position: absolute;
+        bottom: 10px;
+        right: -8px;
+        width: 6px;
+        height: 10px;
+        background: #fff;
+        border-radius: 50%;
+        box-shadow: 10px 0 15px 5px rgba(255, 255, 255, 0.8), 15px 0 25px 10px rgba(0, 229, 255, 0.6);
+    }
+    .pantograph {
+        position: absolute;
+        top: -10px;
+        left: 15px;
+        width: 25px;
+        height: 10px;
+        border: 2px solid #999;
+        border-bottom: none;
+        border-right: none;
+        transform: skewX(-30deg);
+    }
+    
+    .wheel-container {
+        position: absolute;
+        bottom: -8px;
+        width: 100%;
+        display: flex;
+        justify-content: space-evenly;
+    }
+    .wheel {
+        width: 14px;
+        height: 14px;
+        background: #333;
+        border-radius: 50%;
+        border: 2px solid #777;
+        animation: spinWheels 1.5s linear infinite;
+        position: relative;
+    }
+    .wheel::after { /* Spoke for rotation visibility */
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 6px;
+        height: 2px;
+        background: #ccc;
+        transform-origin: left center;
+    }
+    .connector {
+        width: 6px;
+        height: 4px;
+        background: #555;
+        align-self: center;
+        margin-bottom: 6px;
+    }
+
     .clouds {
         position: absolute;
         top: 10px;
@@ -967,9 +1072,10 @@ def render_train_animation():
         white-space: nowrap;
         z-index: 0;
     }
+    
     @keyframes moveTrain {
-        0% { left: -200px; }
-        100% { left: 100%; }
+        0% { left: -350px; }
+        100% { left: 110%; }
     }
     @keyframes scrollTrack {
         0% { transform: translateX(0); }
@@ -979,15 +1085,57 @@ def render_train_animation():
         0% { left: 100%; }
         100% { left: -150px; }
     }
+    @keyframes spinWheels {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
     @media (prefers-reduced-motion: reduce) {
-        .train-emoji { animation: none; left: calc(50% - 60px); }
+        .css-train { animation: none; left: calc(50% - 140px); }
         .train-track { animation: none; }
         .clouds { animation: none; display: none; }
+        .wheel { animation: none; }
     }
     </style>
-    <div class="train-wrapper" aria-label="Train Animation" role="img">
-        <div class="clouds">☁️ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ☁️</div>
-        <div class="train-emoji">🚂🚈🚈</div>
+    <div class="train-wrapper" aria-label="Animated Indian Railway Train" role="img">
+        <div class="clouds">☁️ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ☁️</div>
+        
+        <div class="css-train">
+            <!-- Coach 3 (Back) -->
+            <div class="css-coach">
+                <div class="wheel-container">
+                    <div class="wheel"></div>
+                    <div class="wheel"></div>
+                </div>
+            </div>
+            <div class="connector"></div>
+            <!-- Coach 2 -->
+            <div class="css-coach">
+                <div class="wheel-container">
+                    <div class="wheel"></div>
+                    <div class="wheel"></div>
+                </div>
+            </div>
+            <div class="connector"></div>
+            <!-- Coach 1 -->
+            <div class="css-coach">
+                <div class="wheel-container">
+                    <div class="wheel"></div>
+                    <div class="wheel"></div>
+                </div>
+            </div>
+            <div class="connector"></div>
+            <!-- Engine (Front) -->
+            <div class="css-engine">
+                <div class="pantograph"></div>
+                <div class="wheel-container">
+                    <div class="wheel"></div>
+                    <div class="wheel"></div>
+                    <div class="wheel"></div>
+                </div>
+            </div>
+        </div>
+        
         <div class="train-track"></div>
     </div>
     """
