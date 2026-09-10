@@ -923,17 +923,75 @@ with st.sidebar:
                 """, unsafe_allow_html=True)
         # ====================================================================
         # ====================================================================
-# Load Local Lottie Animation
-@st.cache_data
-def load_lottiefile(filepath: str):
-    try:
-        import json
-        with open(filepath, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return None
-
-lottie_train = load_lottiefile("assets/train_animation.json")
+# Custom CSS Train Animation
+def render_train_animation():
+    html_code = """
+    <style>
+    .train-wrapper {
+        position: relative;
+        width: 100%;
+        height: 120px;
+        overflow: hidden;
+        background: transparent;
+        display: flex;
+        align-items: flex-end;
+        margin-bottom: 20px;
+    }
+    .train-track {
+        position: absolute;
+        bottom: 15px;
+        width: 200%;
+        height: 4px;
+        background: repeating-linear-gradient(90deg, var(--neon-cyan) 0%, var(--neon-cyan) 50%, transparent 50%, transparent 100%);
+        background-size: 40px 4px;
+        opacity: 0.6;
+        animation: scrollTrack 2s linear infinite;
+        z-index: 1;
+    }
+    .train-emoji {
+        position: absolute;
+        bottom: 12px;
+        font-size: 4.5rem;
+        line-height: 1;
+        filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.4));
+        animation: moveTrain 10s linear infinite;
+        z-index: 2;
+        white-space: nowrap;
+    }
+    .clouds {
+        position: absolute;
+        top: 10px;
+        font-size: 2rem;
+        opacity: 0.2;
+        animation: moveClouds 20s linear infinite;
+        white-space: nowrap;
+        z-index: 0;
+    }
+    @keyframes moveTrain {
+        0% { left: -200px; }
+        100% { left: 100%; }
+    }
+    @keyframes scrollTrack {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-40px); }
+    }
+    @keyframes moveClouds {
+        0% { left: 100%; }
+        100% { left: -150px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .train-emoji { animation: none; left: calc(50% - 60px); }
+        .train-track { animation: none; }
+        .clouds { animation: none; display: none; }
+    }
+    </style>
+    <div class="train-wrapper" aria-label="Train Animation" role="img">
+        <div class="clouds">☁️ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ☁️</div>
+        <div class="train-emoji">🚂🚈🚈</div>
+        <div class="train-track"></div>
+    </div>
+    """
+    return html_code
 
 # Create a unified Hero Section using Streamlit Columns
 st.markdown("""
@@ -964,14 +1022,7 @@ st.markdown("""
 
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    if lottie_train:
-        try:
-            from streamlit_lottie import st_lottie
-            st_lottie(lottie_train, height=180, key="train_anim")
-        except:
-            st.markdown("<div style='text-align: center; font-size: 5rem;'>🚆</div><div style='text-align: center; color: var(--text-muted);'>Plan your railway journey smarter.</div>", unsafe_allow_html=True)
-    else:
-        st.markdown("<div style='text-align: center; font-size: 5rem;'>🚆</div><div style='text-align: center; color: var(--text-muted);'>Plan your railway journey smarter.</div>", unsafe_allow_html=True)
+    st.markdown(render_train_animation(), unsafe_allow_html=True)
 
 st.markdown("""
 <div class="hero-title-new">RailFare AI</div>
