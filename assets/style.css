@@ -1,0 +1,1275 @@
+/* ==============================================================================
+   RAILFARE AI - HOLOGRAPHIC COCKPIT & SPATIAL AR DESIGN SYSTEM
+   ============================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+    --bg-deep: #050B14;
+    --bg-cockpit: #0A1624;
+    --bg-card: rgba(10, 22, 36, 0.65);
+    --bg-card-hover: rgba(14, 30, 48, 0.85);
+    --border-glass: rgba(0, 229, 255, 0.22);
+    --border-glass-top: rgba(0, 229, 255, 0.45);
+    --neon-cyan: #00E5FF;
+    --neon-green: #00FF9C;
+    --neon-purple: #8B5CFF;
+    --neon-amber: #FFB020;
+    --neon-red: #FF4D5E;
+    --text-main: #E6F1FF;
+    --text-muted: #7F93A8;
+    --text-dim: rgba(230, 241, 255, 0.45);
+    --glow-cyan: 0 0 15px rgba(0, 229, 255, 0.4);
+    --glow-green: 0 0 15px rgba(0, 255, 156, 0.4);
+    --glow-purple: 0 0 20px rgba(139, 92, 255, 0.35);
+}
+
+/* Hide Default Streamlit Chrome */
+header[data-testid="stHeader"] {
+    visibility: hidden !important;
+    height: 0 !important;
+    padding: 0 !important;
+}
+footer {
+    visibility: hidden !important;
+}
+#MainMenu {
+    visibility: hidden !important;
+}
+
+/* Base Body, HTML & All Streamlit App Containers - Force Dark Holographic Theme */
+html,
+body,
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"],
+section.main,
+.main,
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stHeader"],
+[data-testid="stBottom"],
+div[data-testid="stAppViewContainer"] > section {
+    background-color: var(--bg-deep) !important;
+    background: radial-gradient(circle at 50% 20%, #0c1b30 0%, #060e1c 50%, #03060c 100%) !important;
+    background-attachment: fixed !important;
+    color: var(--text-main) !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Ensure all native Streamlit markdown text is clear and readable on dark background */
+.stMarkdown, .stMarkdown p, .stMarkdown span, .stMarkdown div,
+div[data-testid="stMarkdownContainer"] p,
+div[data-testid="stMarkdownContainer"] span,
+div[data-testid="stMarkdownContainer"] div {
+    color: #E6F1FF;
+}
+
+/* Cyber Grid & Scanline Background Overlays */
+.stApp::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: 
+        linear-gradient(rgba(0, 229, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.02) 1px, transparent 1px);
+    background-size: 36px 36px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.stApp::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15) 0px,
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 2px,
+        transparent 4px
+    );
+    pointer-events: none;
+    opacity: 0.6;
+    z-index: 0;
+}
+
+/* Animated Floating Holographic Auroras */
+.aurora-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.aurora-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.25;
+    animation: auroraFloat 18s ease-in-out infinite alternate;
+}
+.aurora-orb-cyan {
+    top: -10%;
+    left: 15%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, #00E5FF, transparent 70%);
+}
+.aurora-orb-purple {
+    top: 40%;
+    right: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, #8B5CFF, transparent 70%);
+    animation-delay: -5s;
+}
+.aurora-orb-green {
+    bottom: -15%;
+    left: 20%;
+    width: 550px;
+    height: 550px;
+    background: radial-gradient(circle, #00FF9C, transparent 70%);
+    animation-delay: -10s;
+}
+
+@keyframes auroraFloat {
+    0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+    50% { transform: translate(40px, 30px) scale(1.12) rotate(180deg); }
+    100% { transform: translate(-30px, -20px) scale(0.95) rotate(360deg); }
+}
+
+/* Main Content Wrapper Constraint */
+.main .block-container {
+    padding-top: 1.5rem !important;
+    padding-bottom: 3rem !important;
+    max-width: 98% !important;
+    z-index: 1;
+}
+
+/* Holographic Cockpit Header Bar */
+.cockpit-header {
+    background: rgba(10, 22, 36, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-glass);
+    border-top: 1px solid var(--border-glass-top);
+    border-radius: 16px;
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.cockpit-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #FFFFFF;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-shadow: 0 0 12px rgba(0, 229, 255, 0.6);
+}
+
+.cockpit-status-bar {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+}
+
+.status-beacon {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 8px currentColor;
+}
+.status-dot-green {
+    background: var(--neon-green);
+    color: var(--neon-green);
+    animation: pulseGlow 2s infinite;
+}
+.status-dot-cyan {
+    background: var(--neon-cyan);
+    color: var(--neon-cyan);
+    animation: pulseGlow 2s infinite 0.5s;
+}
+
+@keyframes pulseGlow {
+    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px currentColor; }
+    50% { opacity: 0.4; transform: scale(0.85); box-shadow: 0 0 2px currentColor; }
+}
+
+/* Glassmorphism Cards & Panels */
+.glass-panel {
+    background: var(--bg-card);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid var(--border-glass);
+    border-top: 1px solid var(--border-glass-top);
+    border-radius: 16px;
+    padding: 18px 22px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    margin-bottom: 18px;
+    position: relative;
+}
+
+.glass-panel:hover {
+    border-color: rgba(0, 229, 255, 0.4);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 20px rgba(0, 229, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Section Title Headers */
+.section-hdr {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--neon-cyan);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.15);
+    padding-bottom: 8px;
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+}
+
+/* Monospace Telemetry Logs */
+.telemetry-log {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    background: rgba(3, 8, 16, 0.75);
+    border: 1px solid rgba(0, 229, 255, 0.15);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--neon-green);
+    overflow-x: auto;
+    max-height: 160px;
+}
+
+.telemetry-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+    padding-bottom: 3px;
+}
+.telemetry-label {
+    color: var(--text-muted);
+}
+.telemetry-val {
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+/* KPI Tiles */
+.kpi-tile-wrap {
+    background: rgba(8, 18, 30, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 229, 255, 0.15);
+    border-top: 1px solid rgba(0, 229, 255, 0.3);
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: center;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.kpi-tile-wrap:hover {
+    transform: translateY(-2px);
+    border-color: var(--neon-cyan);
+}
+.kpi-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+.kpi-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #FFFFFF;
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+    letter-spacing: 0.5px;
+}
+.kpi-delta {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 2px;
+}
+.kpi-delta-up { color: var(--neon-red); }
+.kpi-delta-down { color: var(--neon-green); }
+.kpi-delta-neut { color: var(--neon-cyan); }
+
+/* Status Badges */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+.status-pill-green {
+    background: rgba(0, 255, 156, 0.12);
+    border: 1px solid var(--neon-green);
+    color: var(--neon-green);
+    box-shadow: 0 0 10px rgba(0, 255, 156, 0.2);
+}
+.status-pill-amber {
+    background: rgba(255, 176, 32, 0.12);
+    border: 1px solid var(--neon-amber);
+    color: var(--neon-amber);
+    box-shadow: 0 0 10px rgba(255, 176, 32, 0.2);
+}
+.status-pill-red {
+    background: rgba(255, 77, 94, 0.12);
+    border: 1px solid var(--neon-red);
+    color: var(--neon-red);
+    box-shadow: 0 0 10px rgba(255, 77, 94, 0.2);
+}
+.status-pill-cyan {
+    background: rgba(0, 229, 255, 0.12);
+    border: 1px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+}
+
+/* Spatial AR Train Card */
+.train-cockpit-card {
+    background: rgba(10, 22, 36, 0.65);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    border-top: 1px solid rgba(0, 229, 255, 0.45);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.train-cockpit-card:hover {
+    transform: translateY(-3px) scale(1.008);
+    border-color: var(--neon-cyan);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.65), 0 0 18px rgba(0, 229, 255, 0.25);
+}
+
+.train-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+}
+.train-name-tag {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    letter-spacing: 0.5px;
+}
+.train-num-pill {
+    background: rgba(0, 229, 255, 0.15);
+    border: 1px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.route-timeline-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(4, 11, 20, 0.5);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 12px;
+}
+.time-val {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #FFFFFF;
+}
+.station-tag {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--neon-cyan);
+}
+.timeline-center-rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    padding: 0 16px;
+}
+.duration-label {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+}
+.rail-track-line {
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--neon-green), var(--neon-cyan), var(--neon-purple));
+    border-radius: 2px;
+    margin: 4px 0;
+    box-shadow: 0 0 6px rgba(0, 229, 255, 0.5);
+}
+
+/* Class Availability Pills */
+.class-pill-grid {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.class-pill-item {
+    flex: 1;
+    min-width: 85px;
+    background: rgba(8, 18, 30, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 8px 10px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+.class-pill-item:hover {
+    border-color: var(--neon-cyan);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.class-code {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #FFFFFF;
+}
+.class-fare {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--neon-cyan);
+}
+.class-status {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.class-status-avl { color: var(--neon-green); }
+.class-status-rac { color: var(--neon-amber); }
+.class-status-wl  { color: var(--neon-red); }
+
+/* Glowing Gradient Primary Action Button */
+div[data-testid="stButton"] button[kind="primary"] {
+    background: linear-gradient(135deg, #00E5FF 0%, #8B5CFF 100%) !important;
+    color: #03060C !important;
+    font-family: 'Orbitron', monospace !important;
+    font-size: 0.95rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 1.5px !important;
+    text-transform: uppercase !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 12px 28px !important;
+    box-shadow: 0 6px 20px rgba(0, 229, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    width: 100% !important;
+}
+
+div[data-testid="stButton"] button[kind="primary"]:hover {
+    transform: translateY(-3px) scale(1.02) !important;
+    box-shadow: 0 10px 28px rgba(0, 229, 255, 0.65), 0 0 25px rgba(139, 92, 255, 0.5) !important;
+    color: #000000 !important;
+}
+
+/* Secondary Button Style */
+div[data-testid="stButton"] button[kind="secondary"] {
+    background: rgba(10, 22, 36, 0.75) !important;
+    border: 1px solid var(--border-glass) !important;
+    color: var(--text-main) !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px !important;
+    border-radius: 10px !important;
+    transition: all 0.2s ease !important;
+}
+div[data-testid="stButton"] button[kind="secondary"]:hover {
+    border-color: var(--neon-cyan) !important;
+    color: var(--neon-cyan) !important;
+    box-shadow: 0 0 14px rgba(0, 229, 255, 0.3) !important;
+}
+
+/* Streamlit Inputs Glassmorphism Overhaul */
+div[data-testid="stSelectbox"] > div > div {
+    background: rgba(8, 18, 30, 0.7) !important;
+    border: 1px solid rgba(0, 229, 255, 0.25) !important;
+    border-radius: 10px !important;
+    color: #FFFFFF !important;
+}
+div[data-testid="stDateInput"] input,
+div[data-testid="stTextInput"] input {
+    background: rgba(8, 18, 30, 0.7) !important;
+    border: 1px solid rgba(0, 229, 255, 0.25) !important;
+    border-radius: 10px !important;
+    color: #FFFFFF !important;
+    font-family: 'Inter', sans-serif !important;
+    font-weight: 600 !important;
+}
+div[data-testid="stSelectbox"] label,
+div[data-testid="stDateInput"] label,
+div[data-testid="stTextInput"] label {
+    font-family: 'Rajdhani', sans-serif !important;
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    color: var(--neon-cyan) !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+}
+
+/* Top Nav Pill Bar */
+.hologram-nav-container {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 6px;
+    background: rgba(8, 18, 30, 0.6);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    border-radius: 50px;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Glass Pill Radio Group (Top Cockpit Navigation) */
+div[data-testid="stRadio"] > div[role="radiogroup"] {
+    background: rgba(8, 18, 30, 0.75) !important;
+    backdrop-filter: blur(18px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+    border: 1px solid rgba(0, 229, 255, 0.25) !important;
+    border-top: 1px solid rgba(0, 229, 255, 0.45) !important;
+    border-radius: 50px !important;
+    padding: 6px 14px !important;
+    display: flex !important;
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    margin-bottom: 24px !important;
+}
+
+div[data-testid="stRadio"] > div[role="radiogroup"] label[data-baseweb="radio"] {
+    background: transparent !important;
+    padding: 8px 18px !important;
+    border-radius: 30px !important;
+    cursor: pointer !important;
+    border: 1px solid transparent !important;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+
+div[data-testid="stRadio"] > div[role="radiogroup"] label[data-baseweb="radio"]:hover {
+    background: rgba(0, 229, 255, 0.1) !important;
+    border-color: rgba(0, 229, 255, 0.3) !important;
+}
+
+div[data-testid="stRadio"] > div[role="radiogroup"] label[data-baseweb="radio"] div:first-child {
+    display: none !important; /* Hide native radio circle */
+}
+
+div[data-testid="stRadio"] > div[role="radiogroup"] label[data-baseweb="radio"] div[data-testid="stMarkdownContainer"] p {
+    font-family: 'Rajdhani', sans-serif !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    margin: 0 !important;
+}
+
+/* Selected state */
+div[data-testid="stRadio"] > div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.25), rgba(139, 92, 255, 0.25)) !important;
+    border: 1px solid var(--neon-cyan) !important;
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+div[data-testid="stRadio"] > div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) div[data-testid="stMarkdownContainer"] p {
+    color: #FFFFFF !important;
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.7) !important;
+}
+
+/* Screen Top Banner */
+.screen-top-banner {
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.screen-top-banner-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.15rem;
+    color: #FFFFFF;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+/* Telemetry Status Strip */
+.telemetry-status-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(5, 11, 20, 0.65);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Stoppages Table Components */
+.mobile-table-hint {
+    display: none;
+    font-size: 0.72rem;
+    color: var(--neon-cyan);
+    margin-bottom: 6px;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.stoppages-table-container {
+    padding: 10px 14px;
+    margin-top: 8px;
+    max-height: 380px;
+    overflow-y: auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid rgba(0, 229, 255, 0.22);
+    border-radius: 14px;
+}
+.stoppages-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+.stoppages-table thead tr {
+    border-bottom: 1px solid rgba(0, 229, 255, 0.25);
+    font-size: 0.72rem;
+    color: #7F93A8;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+.stoppages-table th {
+    padding: 7px 8px;
+    position: sticky;
+    top: 0;
+    background: #081422;
+    z-index: 2;
+}
+
+/* Travel Hub Screen 3 Elements */
+.travel-hub-header-pill {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(10, 22, 36, 0.7);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+    border-radius: 50px;
+    padding: 8px 20px;
+    margin-bottom: 18px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.travel-hub-title-box {
+    background: linear-gradient(90deg, rgba(0, 229, 255, 0.15), rgba(139, 92, 255, 0.15));
+    border: 1px solid;
+    border-image: linear-gradient(90deg, #00E5FF, #8B5CFF, #00FF9C) 1;
+    border-radius: 12px;
+    padding: 14px 22px;
+    text-align: center;
+    margin-bottom: 22px;
+}
+.travel-hub-title-text {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #FFFFFF;
+    letter-spacing: 2px;
+    text-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+}
+.travel-hub-subtitle-text {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--neon-cyan);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+/* Multi-Day Calendar Strip */
+.multi-day-cal-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+}
+
+/* Dynamic Fare Result Card */
+.dynamic-fare-result-card {
+    background: linear-gradient(135deg, rgba(10, 22, 36, 0.9), rgba(15, 30, 52, 0.95)) !important;
+    border: 1px solid var(--neon-cyan) !important;
+    box-shadow: 0 0 25px rgba(0, 229, 255, 0.35) !important;
+    padding: 22px 24px !important;
+    margin-top: 14px !important;
+}
+.result-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.fare-price-tag {
+    font-family: 'Orbitron', monospace;
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #FFFFFF;
+    text-shadow: 0 0 15px rgba(0, 229, 255, 0.8);
+}
+
+/* ==============================================================================
+   COMPREHENSIVE MOBILE & TABLET RESPONSIVE OVERHAUL (max-width: 768px)
+   ============================================================================== */
+@media (max-width: 768px) {
+    /* Full Viewport Padding Optimization */
+    .main .block-container {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+        padding-top: 0.75rem !important;
+        padding-bottom: 2rem !important;
+        max-width: 100% !important;
+    }
+
+    /* Ambient Auroras - Light Weight on Mobile GPU */
+    .aurora-orb {
+        width: 280px !important;
+        height: 280px !important;
+        filter: blur(50px) !important;
+        opacity: 0.16 !important;
+    }
+
+    /* Holographic Cockpit Header Bar */
+    .cockpit-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+        padding: 10px 14px !important;
+        border-radius: 12px !important;
+        margin-bottom: 12px !important;
+    }
+    .cockpit-title {
+        font-size: 1.05rem !important;
+        letter-spacing: 0.8px !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+    }
+    .cockpit-status-bar {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 5px !important;
+        width: 100% !important;
+        padding-top: 8px !important;
+        border-top: 1px solid rgba(0, 229, 255, 0.12) !important;
+    }
+    .status-beacon {
+        font-size: 0.62rem !important;
+        letter-spacing: 0.2px !important;
+        padding: 4px 4px !important;
+        background: rgba(4, 11, 20, 0.7) !important;
+        border: 1px solid rgba(0, 229, 255, 0.15) !important;
+        border-radius: 6px !important;
+        justify-content: center !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        gap: 4px !important;
+    }
+    .status-dot {
+        width: 6px !important;
+        height: 6px !important;
+    }
+
+    /* Top Cockpit Navigation - Swipeable Horizontal Glass Pill Carousel */
+    div[data-testid="stRadio"] > div[role="radiogroup"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        border-radius: 24px !important;
+        padding: 5px 8px !important;
+        margin-bottom: 14px !important;
+        justify-content: flex-start !important;
+        gap: 6px !important;
+        width: 100% !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+    }
+    div[data-testid="stRadio"] > div[role="radiogroup"]::-webkit-scrollbar {
+        display: none !important;
+    }
+    div[data-testid="stRadio"] > div[role="radiogroup"] label[data-baseweb="radio"] {
+        flex-shrink: 0 !important;
+        padding: 6px 12px !important;
+        border-radius: 18px !important;
+    }
+    div[data-testid="stRadio"] > div[role="radiogroup"] label[data-baseweb="radio"] div[data-testid="stMarkdownContainer"] p {
+        font-size: 0.78rem !important;
+        letter-spacing: 0.5px !important;
+        white-space: nowrap !important;
+    }
+
+    /* Screen 1 Reordering: Present Pydeck Map & Halts Table FIRST on Mobile */
+    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stDeckGlJsonChart"]) {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stDeckGlJsonChart"]) > div[data-testid="column"]:nth-child(2) {
+        order: -1 !important;
+        width: 100% !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stDeckGlJsonChart"]) > div[data-testid="column"]:nth-child(1) {
+        order: 1 !important;
+        width: 100% !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(div[data-testid="stDeckGlJsonChart"]) > div[data-testid="column"]:nth-child(3) {
+        order: 2 !important;
+        width: 100% !important;
+    }
+
+    /* Pydeck 3D GIS Satellite Map Touch Styling */
+    div[data-testid="stDeckGlJsonChart"] {
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        border: 1px solid rgba(0, 229, 255, 0.28) !important;
+        max-height: 400px !important;
+    }
+
+    /* Stoppages & Platforms Table - Fluid Horizontal Swipe Container */
+    .mobile-table-hint {
+        display: block !important;
+    }
+    .stoppages-table-container {
+        padding: 8px 10px !important;
+        max-height: 360px !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    .stoppages-table {
+        min-width: 620px !important;
+        font-size: 0.76rem !important;
+    }
+    .stoppages-table th {
+        padding: 6px 8px !important;
+        font-size: 0.7rem !important;
+        white-space: nowrap !important;
+    }
+    .stoppages-table td {
+        padding: 6px 8px !important;
+        white-space: nowrap !important;
+    }
+    .stoppages-table td:nth-child(2) {
+        white-space: normal !important;
+        min-width: 160px !important;
+    }
+
+    /* Screen Top Banners */
+    .screen-top-banner {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+    }
+    .screen-top-banner-title {
+        font-size: 1.02rem !important;
+    }
+
+    /* Telemetry Status Strip */
+    .telemetry-status-strip {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        padding: 8px 12px !important;
+    }
+
+    /* KPI Metric Tiles Grid (2x2 Dashboard Layout on Mobile) */
+    div[data-testid="stHorizontalBlock"]:has(.kpi-tile-wrap) {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.kpi-tile-wrap) > div[data-testid="column"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+    .kpi-tile-wrap {
+        padding: 10px 8px !important;
+        border-radius: 10px !important;
+    }
+    .kpi-title {
+        font-size: 0.72rem !important;
+        letter-spacing: 0.5px !important;
+    }
+    .kpi-value {
+        font-size: 1.2rem !important;
+    }
+    .kpi-delta {
+        font-size: 0.68rem !important;
+    }
+
+    /* Spatial AR Train Cards on Mobile */
+    .train-cockpit-card {
+        padding: 12px 14px !important;
+        border-radius: 12px !important;
+        margin-bottom: 10px !important;
+    }
+    .train-cockpit-card:hover {
+        transform: none !important;
+    }
+    .train-card-header {
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 8px !important;
+    }
+    .train-name-tag {
+        font-size: 0.92rem !important;
+        letter-spacing: 0.3px !important;
+    }
+    .train-num-pill {
+        font-size: 0.72rem !important;
+        padding: 2px 6px !important;
+    }
+    .route-timeline-strip {
+        padding: 8px 10px !important;
+        margin-bottom: 10px !important;
+    }
+    .time-val {
+        font-size: 1.1rem !important;
+    }
+    .station-tag {
+        font-size: 0.74rem !important;
+    }
+    .timeline-center-rail {
+        padding: 0 8px !important;
+    }
+    .duration-label {
+        font-size: 0.68rem !important;
+    }
+    .class-pill-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px !important;
+    }
+    .class-pill-item {
+        min-width: 0 !important;
+        padding: 6px 4px !important;
+        border-radius: 8px !important;
+    }
+    .class-code {
+        font-size: 0.72rem !important;
+    }
+    .class-fare {
+        font-size: 0.85rem !important;
+    }
+    .class-status {
+        font-size: 0.62rem !important;
+    }
+
+    /* Screen 3 Travel Hub Elements */
+    .travel-hub-header-pill {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        padding: 8px 14px !important;
+        border-radius: 14px !important;
+    }
+    .travel-hub-title-box {
+        padding: 12px 14px !important;
+        border-radius: 10px !important;
+        margin-bottom: 14px !important;
+    }
+    .travel-hub-title-text {
+        font-size: 1.15rem !important;
+        letter-spacing: 1px !important;
+    }
+    .travel-hub-subtitle-text {
+        font-size: 0.75rem !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    /* Dynamic Fare Result Card */
+    .dynamic-fare-result-card {
+        padding: 14px 16px !important;
+        border-radius: 12px !important;
+    }
+    .result-header-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+    }
+    .fare-price-tag {
+        font-size: 1.75rem !important;
+    }
+
+    /* Section Headers */
+    .section-hdr {
+        font-size: 0.85rem !important;
+        letter-spacing: 1px !important;
+        margin-bottom: 10px !important;
+        padding-bottom: 6px !important;
+    }
+
+    /* Glass Panels & Monospace Log */
+    .glass-panel {
+        padding: 12px 14px !important;
+        border-radius: 12px !important;
+        margin-bottom: 12px !important;
+    }
+    .glass-panel:hover {
+        transform: none !important;
+    }
+    .telemetry-row {
+        font-size: 0.76rem !important;
+        gap: 6px !important;
+    }
+    .telemetry-log {
+        font-size: 0.68rem !important;
+        padding: 8px 10px !important;
+        line-height: 1.4 !important;
+        max-height: 140px !important;
+        word-break: break-all !important;
+    }
+
+    /* Touch Sized Inputs & Buttons */
+    div[data-testid="stSelectbox"] > div > div,
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stDateInput"] input {
+        min-height: 42px !important;
+        font-size: 0.88rem !important;
+    }
+    div[data-testid="stButton"] button[kind="primary"] {
+        min-height: 46px !important;
+        font-size: 0.86rem !important;
+        padding: 10px 18px !important;
+        letter-spacing: 1px !important;
+        border-radius: 10px !important;
+    }
+    div[data-testid="stButton"] button[kind="secondary"] {
+        min-height: 42px !important;
+        font-size: 0.85rem !important;
+        padding: 8px 14px !important;
+        border-radius: 8px !important;
+    }
+
+    /* Plotly Charts Mobile Fit */
+    div[data-testid="stPlotlyChart"] {
+        width: 100% !important;
+        overflow: hidden !important;
+    }
+}
+
+/* ==============================================================================
+   EXTRA NARROW SMARTPHONES (max-width: 480px - iPhone SE, Compact Androids)
+   ============================================================================== */
+@media (max-width: 480px) {
+    .cockpit-title {
+        font-size: 0.95rem !important;
+        letter-spacing: 0.5px !important;
+    }
+    .status-beacon {
+        font-size: 0.56rem !important;
+        padding: 3px 2px !important;
+        gap: 3px !important;
+    }
+    .class-pill-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .stoppages-table-container {
+        padding: 6px 6px !important;
+    }
+    .travel-hub-title-text {
+        font-size: 1.05rem !important;
+    }
+    .fare-price-tag {
+        font-size: 1.55rem !important;
+    }
+}
+
+
+/* ==============================================================================
+   ANDROID NATIVE APP EXPERIENCE ADDITIONS
+   ============================================================================== */
+
+/* ── Prevent iOS / Android auto-zoom on form inputs ─────────────────────── */
+@media (max-width: 768px) {
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="search"],
+    input[type="date"],
+    select,
+    textarea {
+        font-size: 16px !important; /* 16px prevents auto-zoom on Android & iOS */
+    }
+
+    /* ── Make Streamlit slider thumb touch-friendly ── */
+    div[data-testid="stSlider"] div[role="slider"] {
+        width: 28px !important;
+        height: 28px !important;
+        cursor: grab !important;
+        touch-action: none !important;
+    }
+
+    /* ── Streamlit tabs on mobile (PNR screen) ── */
+    div[data-testid="stTabs"] button[role="tab"] {
+        font-size: 0.8rem !important;
+        padding: 8px 12px !important;
+        min-height: 44px !important;
+        font-family: 'Rajdhani', sans-serif !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    /* ── Spinner centered & bigger on mobile ── */
+    div[data-testid="stSpinner"] {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        padding: 20px 0 !important;
+    }
+
+    /* ── Plotly chart: allow touch pan/zoom ── */
+    .js-plotly-plot .plotly {
+        touch-action: pan-y !important;
+    }
+
+    /* ── Pydeck map: allow single-finger pan ── */
+    .deckgl-wrapper canvas {
+        touch-action: pan-y !important;
+    }
+
+    /* ── Caption text size ── */
+    .stCaption {
+        font-size: 0.72rem !important;
+    }
+
+    /* ── Success / Warning / Error alerts ── */
+    div[data-testid="stAlert"] {
+        border-radius: 10px !important;
+        font-size: 0.84rem !important;
+        padding: 10px 14px !important;
+    }
+
+    /* ── Link button (IRCTC book) ── */
+    div[data-testid="stLinkButton"] a {
+        min-height: 42px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 0.85rem !important;
+    }
+}
+
+/* ── Mobile stoppages & touch layout adjustments ── */
+@media (max-width: 768px) {
+    .section-hdr {
+        position: relative;
+    }
+    .section-hdr::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 32px;
+        height: 2px;
+        background: var(--neon-cyan);
+        border-radius: 2px;
+        box-shadow: 0 0 6px rgba(0, 229, 255, 0.6);
+    }
+
+    /* ── Bigger station code text on mobile for readability ── */
+    .stoppages-table b[style*="Orbitron"] {
+        font-size: 0.82rem !important;
+    }
+
+    /* ── Halts table row height: finger-friendly ── */
+    .stoppages-table tr {
+        min-height: 44px !important;
+    }
+    .stoppages-table td, .stoppages-table th {
+        line-height: 1.4 !important;
+    }
+
+    /* ── Class pills: 2-column on very narrow phones ── */
+    @media (max-width: 360px) {
+        .class-pill-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+    }
+}
+
+

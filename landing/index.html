@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#050B14" />
+  <meta name="description" content="RailFare AI: Real-time predictive surge pricing engine & 3D GIS telemetry cockpit for Indian Railways. Know the fare before the surge." />
+  <meta property="og:title" content="RailFare AI — Predictive Surge Pricing Engine" />
+  <meta property="og:description" content="Preempt dynamic flexi-fares across 12,000+ trains with satellite telemetry and Random Forest intelligence." />
+  <meta property="og:type" content="website" />
+  <title>RailFare AI — Predictive Surge Pricing Engine &amp; Railway Cockpit</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23050B14'/%3E%3Cpath d='M52 14 L26 54 L48 54 L44 86 L74 46 L52 46 Z' fill='%2300E5FF'/%3E%3C/svg%3E" type="image/svg+xml" />
+
+  <!-- Typography: Orbitron, Rajdhani, Inter, Instrument Serif, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <!-- Noscript Fallback -->
+  <noscript>
+    <div class="noscript-banner">
+      ⚡ JavaScript is required to experience the RailFare AI cinematic cockpit. <a href="http://localhost:8501" target="_blank" rel="noopener">Launch the Streamlit app directly</a>.
+    </div>
+  </noscript>
+
+  <!-- WebGL Fixed Background Canvas -->
+  <div id="webgl-canvas-container" aria-hidden="true">
+    <canvas id="webgl-canvas"></canvas>
+  </div>
+
+  <!-- Custom Cursor Elements -->
+  <div id="cursor-ring" aria-hidden="true"></div>
+  <div id="cursor-dot" aria-hidden="true"></div>
+
+  <!-- Sticky Nav -->
+  <header id="site-header">
+    <div class="nav-container">
+      <a href="#" class="nav-logo" aria-label="RailFare AI Home">
+        <span class="logo-bolt">⚡</span>
+        <span class="logo-text">RAILFARE<span class="logo-accent">AI</span></span>
+        <span class="logo-badge">v5.0</span>
+      </a>
+
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="#product" class="nav-link">Product</a>
+        <a href="#pipeline" class="nav-link">How it works</a>
+        <a href="#modules" class="nav-link">Modules</a>
+        <a href="#alerts" class="nav-link">Alerts</a>
+        <a href="#pricing" class="nav-link">Pricing</a>
+      </nav>
+
+      <div class="nav-actions">
+        <div class="status-pill" title="Live IRCTC &amp; RailRadar telemetry pipeline active">
+          <span class="status-pulse-dot" aria-hidden="true"></span>
+          <span class="status-text">all systems normal</span>
+        </div>
+        <a href="#" class="cta-launch-app cta-pill-neon" target="_blank" rel="noopener">
+          Launch app <span class="arrow-glyph" aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Wrap for Smooth Scroll -->
+  <main id="smooth-wrapper">
+    <div id="smooth-content">
+
+      <!-- HERO SECTION -->
+      <section id="hero" class="section hero-section">
+        <div class="hero-grid">
+          
+          <!-- Hero Left Column -->
+          <div class="hero-left">
+            <div class="mono-badge hero-badge">
+              <span class="badge-dot"></span>
+              <span>live beta / 6 modules online</span>
+            </div>
+
+            <h1 class="hero-title" data-scramble>
+              Fares that <em>price themselves.</em>
+            </h1>
+
+            <p class="hero-subcopy">
+              India’s first real-time railway surge forecasting cockpit. Preempt dynamic flexi-fares across 12,000+ trains with satellite telemetry and Random Forest intelligence.
+            </p>
+
+            <div class="hero-cta-group">
+              <a href="#" class="cta-launch-app btn-primary-neon" target="_blank" rel="noopener">
+                <span>Start tracking</span>
+                <span class="btn-arrow" aria-hidden="true">→</span>
+              </a>
+              <button type="button" class="btn-secondary-glass" id="open-demo-modal" aria-haspopup="dialog">
+                <span class="play-icon" aria-hidden="true">▶</span>
+                <span>Watch a demo, 2 min</span>
+              </button>
+            </div>
+
+            <div class="hero-footnote mono-text">
+              <span>free</span>
+              <span class="sep">/</span>
+              <span>no login</span>
+              <span class="sep">/</span>
+              <span>live IRCTC data</span>
+            </div>
+          </div>
+
+          <!-- Hero Right Column: Glass Pipeline Card -->
+          <div class="hero-right">
+            <div class="glass-card pipeline-card" id="hero-pipeline-card">
+              <div class="card-glow-border"></div>
+              
+              <!-- Card Header -->
+              <div class="card-header">
+                <div class="card-header-left">
+                  <span class="chip-status-running">
+                    <span class="mini-pulse"></span> RUNNING
+                  </span>
+                  <span class="card-header-title mono-text">pipeline://telemetry-inference</span>
+                </div>
+                <div class="card-header-right mono-text">
+                  <span>LATENCY: 84ms</span>
+                </div>
+              </div>
+
+              <!-- Animated SVG Node Graph -->
+              <div class="pipeline-graph-wrap" aria-label="Machine Learning Pipeline Diagram">
+                <svg class="pipeline-svg" viewBox="0 0 540 230" preserveAspectRatio="xMidYMid meet">
+                  <defs>
+                    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#00FF9C" />
+                      <stop offset="50%" stop-color="#00E5FF" />
+                      <stop offset="100%" stop-color="#8B5CFF" />
+                    </linearGradient>
+                    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="3" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+
+                  <!-- Curved Connectors -->
+                  <path id="path-1" class="connector-line line-main" d="M 105 110 C 135 110, 150 110, 180 110" />
+                  <path id="path-true" class="connector-line line-true" d="M 270 95 C 295 70, 315 55, 345 55" />
+                  <path id="path-false" class="connector-line line-false" d="M 270 125 C 295 150, 315 165, 345 165" />
+                  <path id="path-join-true" class="connector-line line-join" d="M 435 55 C 455 70, 465 95, 475 110" />
+                  <path id="path-join-false" class="connector-line line-join" d="M 435 165 C 455 150, 465 125, 475 110" />
+
+                  <!-- Connector Travelling Pulses -->
+                  <circle class="pulse-dot" r="3.5" fill="#00E5FF">
+                    <animateMotion dur="2.4s" repeatCount="indefinite" path="M 105 110 C 135 110, 150 110, 180 110" />
+                  </circle>
+                  <circle class="pulse-dot" r="3" fill="#00FF9C">
+                    <animateMotion dur="2.4s" begin="0.8s" repeatCount="indefinite" path="M 270 95 C 295 70, 315 55, 345 55 C 390 55, 435 55, 435 55 C 455 70, 465 95, 475 110" />
+                  </circle>
+
+                  <!-- Node 1: Live IRCTC API -->
+                  <g class="graph-node" transform="translate(15, 85)">
+                    <rect width="90" height="50" rx="8" class="node-box" />
+                    <text x="45" y="24" class="node-title">LIVE API</text>
+                    <text x="45" y="38" class="node-sub">IRCTC Feed</text>
+                  </g>
+
+                  <!-- Node 2: Condition Decision -->
+                  <g class="graph-node" transform="translate(180, 85)">
+                    <rect width="90" height="50" rx="8" class="node-box node-decision" />
+                    <text x="45" y="24" class="node-title">HEALTH OK?</text>
+                    <text x="45" y="38" class="node-sub">Latency &lt; 300ms</text>
+                    <text x="82" y="10" class="cond-tag cond-true">T</text>
+                    <text x="82" y="60" class="cond-tag cond-false">F</text>
+                  </g>
+
+                  <!-- Node 3A: Random Forest Model (True) -->
+                  <g class="graph-node" transform="translate(345, 30)">
+                    <rect width="90" height="50" rx="8" class="node-box node-active" />
+                    <text x="45" y="24" class="node-title">RF MODEL</text>
+                    <text x="45" y="38" class="node-sub">100 Estimators</text>
+                  </g>
+
+                  <!-- Node 3B: Master CSV Fallback (False) -->
+                  <g class="graph-node" transform="translate(345, 140)">
+                    <rect width="90" height="50" rx="8" class="node-box node-fallback" />
+                    <text x="45" y="24" class="node-title">FALLBACK</text>
+                    <text x="45" y="38" class="node-sub">Master CSV</text>
+                  </g>
+
+                  <!-- Node 4: Dynamic Fare + Multiplier Output -->
+                  <g class="graph-node" transform="translate(470, 85)">
+                    <rect width="65" height="50" rx="8" class="node-box node-output" />
+                    <text x="32" y="24" class="node-title">FARE</text>
+                    <text x="32" y="38" class="node-sub node-sub-accent">1.35x Surge</text>
+                  </g>
+                </svg>
+              </div>
+
+              <!-- Pipeline Progress Bar -->
+              <div class="pipeline-progress-track">
+                <div class="pipeline-progress-fill"></div>
+              </div>
+
+              <!-- Live Auto-Updating Log Console -->
+              <div class="live-log-container">
+                <div class="log-title-bar mono-text">
+                  <span>LAST RUNS TELEMETRY</span>
+                  <span class="log-status-live">● STREAMING</span>
+                </div>
+                <div class="log-entries" id="telemetry-log-entries" aria-live="polite">
+                  <!-- Auto-injected via TypeScript -->
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- MONO STAT STRIP -->
+      <section id="stats" class="section stats-section">
+        <div class="stats-grid">
+          <div class="stat-col">
+            <span class="stat-num mono-text">01</span>
+            <div class="stat-val">12,400+</div>
+            <div class="stat-lbl mono-text">TRAINS IN REAL-TIME CATALOG</div>
+          </div>
+          <div class="stat-col">
+            <span class="stat-num mono-text">02</span>
+            <div class="stat-val">3-STAGE</div>
+            <div class="stat-lbl mono-text">ZERO-DOWNTIME HYBRID FALLBACK</div>
+          </div>
+          <div class="stat-col">
+            <span class="stat-num mono-text">03</span>
+            <div class="stat-val">7-DAY</div>
+            <div class="stat-lbl mono-text">DYNAMIC SURGE FORECAST HORIZON</div>
+          </div>
+          <div class="stat-col">
+            <span class="stat-num mono-text">04</span>
+            <div class="stat-val">100 TREES</div>
+            <div class="stat-lbl mono-text">SCIKIT-LEARN RANDOM FOREST</div>
+          </div>
+          <div class="stat-col">
+            <span class="stat-num mono-text">05</span>
+            <div class="stat-val">&lt;120 ms</div>
+            <div class="stat-lbl mono-text">INFERENCE LATENCY (BENCHMARK)</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROBLEM / COMPARISON SECTION -->
+      <section id="product" class="section problem-section">
+        <div class="section-header-split">
+          <div class="header-left">
+            <div class="mono-badge">
+              <span class="badge-dot"></span>
+              <span>the dynamic pricing problem</span>
+            </div>
+            <h2 class="section-title" data-scramble>
+              Most of rail pricing is <em>guesswork.</em>
+            </h2>
+          </div>
+          <div class="header-right">
+            <p class="body-text">
+              Official Indian Railways Flexi-fare circulars mandate a 10% price jump for every 10% block of seats sold, capped at 1.50x base fare on premium Rajdhani and Shatabdi fleets. Yet passengers book blindly without seeing where a train sits in its surge cycle.
+            </p>
+            <p class="body-text text-dim">
+              RailFare AI extracts live berth quotas, computes exact occupancy velocity, and runs Random Forest regression to project fares up to 7 days ahead.
+            </p>
+          </div>
+        </div>
+
+        <!-- Sample Fares & Surge Matrix Table -->
+        <div class="glass-table-card">
+          <div class="table-header-bar mono-text">
+            <span>LIVE CORRIDOR PRICE DISPATCH MATRIX</span>
+            <span class="table-chip">CALCULATED FROM HISTORICAL_TRAIN_DATA.CSV + LIVE APIS</span>
+          </div>
+          <div class="table-scroll-wrap">
+            <table class="mono-table">
+              <thead>
+                <tr>
+                  <th>TRAIN</th>
+                  <th>ROUTE</th>
+                  <th>CLASS</th>
+                  <th>BASE FARE</th>
+                  <th>OCCUPANCY</th>
+                  <th>DAYS OUT</th>
+                  <th>SURGE MULTIPLIER</th>
+                  <th>PROJECTED FARE</th>
+                  <th>PRESSURE</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>#12004</b> SHATABDI</td>
+                  <td>NDLS → LKO</td>
+                  <td>CC</td>
+                  <td>₹1,165</td>
+                  <td><span class="bar-pill"><span class="bar-fill" style="width: 82%"></span> 82%</span></td>
+                  <td>2d</td>
+                  <td class="accent-cyan">1.35x flexi</td>
+                  <td class="accent-bold">₹1,572</td>
+                  <td><span class="badge-tag tag-high">CRITICAL SURGE</span></td>
+                </tr>
+                <tr>
+                  <td><b>#12424</b> RAJDHANI</td>
+                  <td>NDLS → DBRG</td>
+                  <td>3A</td>
+                  <td>₹2,440</td>
+                  <td><span class="bar-pill"><span class="bar-fill" style="width: 94%"></span> 94%</span></td>
+                  <td>1d</td>
+                  <td class="accent-red">1.50x max</td>
+                  <td class="accent-bold">₹3,660</td>
+                  <td><span class="badge-tag tag-peak">PEAK CAPACITY</span></td>
+                </tr>
+                <tr>
+                  <td><b>#22692</b> SBC RAJDHANI</td>
+                  <td>NZM → SBC</td>
+                  <td>2A</td>
+                  <td>₹3,850</td>
+                  <td><span class="bar-pill"><span class="bar-fill" style="width: 48%"></span> 48%</span></td>
+                  <td>5d</td>
+                  <td class="accent-green">1.10x low</td>
+                  <td class="accent-bold">₹4,235</td>
+                  <td><span class="badge-tag tag-low">LOW SURGE</span></td>
+                </tr>
+                <tr>
+                  <td><b>#12259</b> SEALDAH DURONTO</td>
+                  <td>BKN → SDAH</td>
+                  <td>3A</td>
+                  <td>₹2,180</td>
+                  <td><span class="bar-pill"><span class="bar-fill" style="width: 71%"></span> 71%</span></td>
+                  <td>3d</td>
+                  <td class="accent-cyan">1.25x flexi</td>
+                  <td class="accent-bold">₹2,725</td>
+                  <td><span class="badge-tag tag-mid">ELEVATING</span></td>
+                </tr>
+                <tr>
+                  <td><b>#12952</b> MUMBAI RAJDHANI</td>
+                  <td>NDLS → MMCT</td>
+                  <td>1A</td>
+                  <td>₹4,750</td>
+                  <td><span class="bar-pill"><span class="bar-fill" style="width: 25%"></span> 25%</span></td>
+                  <td>6d</td>
+                  <td class="accent-green">1.00x base</td>
+                  <td class="accent-bold">₹4,750</td>
+                  <td><span class="badge-tag tag-normal">STABLE</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-footnote mono-text">
+            <span>RULE ENGINE: min(1.50, 1.0 + (max(0, seats_pct - 10) // 10) * 0.10)</span>
+            <span class="sep">/</span>
+            <span>FALLBACK MULTIPLIER: 1.0 + seats_booked_pct / 200</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SIX MODULES SECTION -->
+      <section id="modules" class="section modules-section">
+        <div class="section-header">
+          <div class="mono-badge">
+            <span class="badge-dot"></span>
+            <span>complete platform architecture</span>
+          </div>
+          <h2 class="section-title" data-scramble>
+            Six modules, <em>one cockpit.</em>
+          </h2>
+          <p class="section-subcopy">
+            Every screen connects directly into Streamlit's real-time state engine. Hover any module to preview its live telemetry interface.
+          </p>
+        </div>
+
+        <div class="modules-container">
+          <div class="modules-list" role="list">
+
+            <!-- Module 1 -->
+            <div class="module-row" data-module="0" role="listitem" tabindex="0">
+              <div class="module-row-index mono-text">01</div>
+              <div class="module-row-icon">🛰️</div>
+              <div class="module-row-main">
+                <h3 class="module-row-name">3D GIS Live Tracker</h3>
+                <p class="module-row-desc">Interactive Pydeck 3D corridor map with real-time GPS coordinates, speed routes, and halt station telemetry.</p>
+              </div>
+              <div class="module-row-tag mono-text">PYDECK / 25KV AC GPS</div>
+              <div class="module-row-arrow" aria-hidden="true">→</div>
+            </div>
+
+            <!-- Module 2 -->
+            <div class="module-row" data-module="1" role="listitem" tabindex="0">
+              <div class="module-row-index mono-text">02</div>
+              <div class="module-row-icon">🎛️</div>
+              <div class="module-row-main">
+                <h3 class="module-row-name">AI Cockpit &amp; Operations</h3>
+                <p class="module-row-desc">Fleet-wide demand scores, real-time surge dispatch matrix, velocity distribution, and operational pressure gauges.</p>
+              </div>
+              <div class="module-row-tag mono-text">SPEEDOMETER / METRICS</div>
+              <div class="module-row-arrow" aria-hidden="true">→</div>
+            </div>
+
+            <!-- Module 3 -->
+            <div class="module-row" data-module="2" role="listitem" tabindex="0">
+              <div class="module-row-index mono-text">03</div>
+              <div class="module-row-icon">🚀</div>
+              <div class="module-row-main">
+                <h3 class="module-row-name">Spatial AR Travel Hub (Fare AI)</h3>
+                <p class="module-row-desc">Dynamic fare engine projecting multi-day pricing across 1A, 2A, 3A, and SL classes with Random Forest inference.</p>
+              </div>
+              <div class="module-row-tag mono-text">RANDOM FOREST / 7-DAY</div>
+              <div class="module-row-arrow" aria-hidden="true">→</div>
+            </div>
+
+            <!-- Module 4 -->
+            <div class="module-row" data-module="3" role="listitem" tabindex="0">
+              <div class="module-row-index mono-text">04</div>
+              <div class="module-row-icon">🎫</div>
+              <div class="module-row-main">
+                <h3 class="module-row-name">PNR &amp; Live Tracking</h3>
+                <p class="module-row-desc">10-digit PNR decoder calculating exact chart confirmation odds, coach layouts, delay predictions, and platform locators.</p>
+              </div>
+              <div class="module-row-tag mono-text">PROBABILITY / PLATFORMS</div>
+              <div class="module-row-arrow" aria-hidden="true">→</div>
+            </div>
+
+            <!-- Module 5 -->
+            <div class="module-row" data-module="4" role="listitem" tabindex="0">
+              <div class="module-row-index mono-text">05</div>
+              <div class="module-row-icon">📊</div>
+              <div class="module-row-main">
+                <h3 class="module-row-name">Station Congestion</h3>
+                <p class="module-row-desc">Junction crowd index for major hubs (NDLS, HWH, CSMT), tracking platform-by-platform occupancies and rush hours.</p>
+              </div>
+              <div class="module-row-tag mono-text">36 JUNCTIONS / CROWD AI</div>
+              <div class="module-row-arrow" aria-hidden="true">→</div>
+            </div>
+
+            <!-- Module 6 -->
+            <div class="module-row" data-module="5" role="listitem" tabindex="0">
+              <div class="module-row-index mono-text">06</div>
+              <div class="module-row-icon">🛡️</div>
+              <div class="module-row-main">
+                <h3 class="module-row-name">Grievances &amp; Admin</h3>
+                <p class="module-row-desc">Passenger support desk with urgency tagging, catering resolution logs, safety escalations, and system audit trails.</p>
+              </div>
+              <div class="module-row-tag mono-text">DATABASE / AUDIT LOG</div>
+              <div class="module-row-arrow" aria-hidden="true">→</div>
+            </div>
+
+          </div>
+
+          <!-- Dynamic Glass Preview Card (Updates on Hover) -->
+          <div class="module-preview-card glass-card" id="module-preview-display">
+            <div class="preview-badge mono-text" id="preview-badge">LIVE MODULE TELEMETRY</div>
+            <div class="preview-title" id="preview-title">3D GIS Live Tracker</div>
+            <div class="preview-sub" id="preview-sub">Corridor Map with Satellite GPS &amp; Speed Routes</div>
+            
+            <div class="preview-metric-box">
+              <div class="metric-row">
+                <span class="mono-text">DATA SOURCE</span>
+                <span class="mono-text accent-cyan" id="preview-src">RailRadar Satellite Uplink</span>
+              </div>
+              <div class="metric-row">
+                <span class="mono-text">STATUS</span>
+                <span class="mono-text accent-green" id="preview-status">CONNECTED (100% ONLINE)</span>
+              </div>
+              <div class="metric-row">
+                <span class="mono-text">SAMPLE TARGET</span>
+                <span class="mono-text accent-bold" id="preview-target">#12004 NDLS → LKO (PLATFORM #1)</span>
+              </div>
+            </div>
+
+            <div class="preview-cta-wrap">
+              <a href="#" class="cta-launch-app btn-primary-neon btn-sm" id="preview-cta-btn" data-screen="tracker" target="_blank" rel="noopener">
+                Open module in cockpit →
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ALERTS SECTION -->
+      <section id="alerts" class="section alerts-section">
+        <div class="section-header">
+          <div class="mono-badge">
+            <span class="badge-dot"></span>
+            <span>predictive intelligence</span>
+          </div>
+          <h2 class="section-title" data-scramble>
+            Alerts where passengers <em>already are.</em>
+          </h2>
+          <p class="section-subcopy">
+            No more checking seats every two hours. RailFare AI monitors corridor capacity in the background and signals when action is urgent.
+          </p>
+        </div>
+
+        <div class="alerts-grid">
+          <!-- Card 1 -->
+          <div class="glass-card alert-card">
+            <div class="alert-icon-wrap icon-cyan">⚡</div>
+            <div class="alert-badge mono-text">THRESHOLD NOTIFICATION</div>
+            <h3 class="alert-title">Surge Bucket Incursions</h3>
+            <p class="alert-desc">
+              Get signaled the moment a train crosses the 10% booking bucket boundary before IRCTC’s next 10% surcharge kicks into effect.
+            </p>
+            <div class="alert-metric mono-text">
+              <span class="metric-key">THRESHOLD:</span>
+              <span class="metric-val">10% BUCKET BLOCKS (1.1x → 1.5x)</span>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="glass-card alert-card">
+            <div class="alert-icon-wrap icon-green">🎯</div>
+            <div class="alert-badge mono-text">ML PROBABILITY SCORING</div>
+            <h3 class="alert-title">Confirmation Predictor</h3>
+            <p class="alert-desc">
+              Calculate exact chances of WL (Waitlist) moving to RAC or Confirmed status before you pay for an unconfirmed ticket.
+            </p>
+            <div class="alert-metric mono-text">
+              <span class="metric-key">MODEL:</span>
+              <span class="metric-val">HISTORICAL MOVEMENT REGRESSION</span>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="glass-card alert-card">
+            <div class="alert-icon-wrap icon-purple">🔄</div>
+            <div class="alert-badge mono-text">SMART ALTERNATES</div>
+            <h3 class="alert-title">Split-Route Intelligence</h3>
+            <p class="alert-desc">
+              When direct berths are waitlisted, our route planner surfaces intermediate junction splits (e.g. via CNB or AGC) with confirmed seats.
+            </p>
+            <div class="alert-metric mono-text">
+              <span class="metric-key">DISPATCH:</span>
+              <span class="metric-val">MULTI-HOP JUNCTION EXPEDITION</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FINAL CTA & PRICING SECTION -->
+      <section id="pricing" class="section cta-section">
+        <div class="glass-card cta-hero-card">
+          <div class="cta-aurora" aria-hidden="true"></div>
+          
+          <div class="mono-badge">
+            <span class="badge-dot"></span>
+            <span>100% free / open telemetry</span>
+          </div>
+
+          <h2 class="cta-title" data-scramble>
+            Know the fare <em>before the surge.</em>
+          </h2>
+
+          <p class="cta-subcopy">
+            Launch the full holographic cockpit in your browser or install it as a native PWA on Android. No sign-up, no tokens, no paywalls.
+          </p>
+
+          <div class="cta-button-row">
+            <a href="#" class="cta-launch-app btn-primary-neon btn-lg" target="_blank" rel="noopener">
+              <span>Launch Cockpit v5.0</span>
+              <span class="btn-arrow" aria-hidden="true">↗</span>
+            </a>
+          </div>
+
+          <div class="cta-badges-row mono-text">
+            <span>PYTHON &bull; STREAMLIT</span>
+            <span class="sep">/</span>
+            <span>SCIKIT-LEARN RANDOM FOREST</span>
+            <span class="sep">/</span>
+            <span>3D GIS PYDECK</span>
+            <span class="sep">/</span>
+            <span>ANDROID PWA</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOOTER -->
+      <footer id="site-footer">
+        <div class="footer-container">
+          <div class="footer-brand">
+            <div class="nav-logo">
+              <span class="logo-bolt">⚡</span>
+              <span class="logo-text">RAILFARE<span class="logo-accent">AI</span></span>
+            </div>
+            <p class="footer-tagline mono-text">
+              Predictive Dynamic Pricing &amp; 3D Telemetry Platform for Indian Railways.
+            </p>
+            
+            <!-- Lead Developer Credit Box -->
+            <div class="developer-credit-box">
+              <div class="dev-badge mono-text">
+                <span class="badge-dot"></span>
+                <span>LEAD ARCHITECT &amp; DEVELOPER</span>
+              </div>
+              <div class="dev-name">Ritik Dixit</div>
+              <div class="dev-role mono-text">B.Tech 3rd Year IT</div>
+              <div class="dev-links-list">
+                <a href="mailto:dixitritik14@gmail.com" class="dev-link mono-text">
+                  <span class="dev-icon">✉</span> dixitritik14@gmail.com
+                </a>
+                <a href="https://github.com/RitikDixit14" target="_blank" rel="noopener noreferrer" class="dev-link mono-text">
+                  <span class="dev-icon">⌨</span> https://github.com/RitikDixit14
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-nav">
+            <div class="footer-col">
+              <div class="footer-col-title mono-text">COCKPIT SCREENS</div>
+              <a href="#" class="cta-launch-app" data-screen="tracker">3D GIS Live Tracker</a>
+              <a href="#" class="cta-launch-app" data-screen="cockpit">AI Operations Cockpit</a>
+              <a href="#" class="cta-launch-app" data-screen="travel">Spatial AR Travel Hub</a>
+              <a href="#" class="cta-launch-app" data-screen="pnr">PNR &amp; Halt Telemetry</a>
+              <a href="#" class="cta-launch-app" data-screen="station">Station Congestion</a>
+              <a href="#" class="cta-launch-app" data-screen="grievance">Grievance Portal</a>
+            </div>
+
+            <div class="footer-col">
+              <div class="footer-col-title mono-text">TECH STACK</div>
+              <span>Streamlit Core (Python 3.12)</span>
+              <span>Scikit-Learn Random Forest</span>
+              <span>Pydeck 3D GIS Telemetry</span>
+              <span>Three.js + GSAP + Lenis</span>
+              <span>Android PWA Web Manifest</span>
+            </div>
+
+            <div class="footer-col">
+              <div class="footer-col-title mono-text">CREATOR &amp; PROJECT</div>
+              <a href="https://github.com/RitikDixit14" target="_blank" rel="noopener noreferrer">GitHub @RitikDixit14</a>
+              <a href="mailto:dixitritik14@gmail.com">Contact Developer</a>
+              <a href="https://www.irctc.co.in" target="_blank" rel="noopener noreferrer">IRCTC Official Rules</a>
+              <a href="https://streamlit.io" target="_blank" rel="noopener noreferrer">Streamlit Cloud</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-bottom mono-text">
+          <div class="footer-bottom-copy">
+            &copy; 2026 RAILFARE AI &bull; Made by <b>Ritik Dixit</b> (B.Tech 3rd Year IT) &bull; <a href="mailto:dixitritik14@gmail.com" class="footer-inline-link">dixitritik14@gmail.com</a> &bull; <a href="https://github.com/RitikDixit14" target="_blank" rel="noopener noreferrer" class="footer-inline-link">github.com/RitikDixit14 ↗</a>
+          </div>
+          <span class="footer-status-pill">
+            <span class="status-pulse-dot" aria-hidden="true"></span> ENGINE CONNECTED
+          </span>
+        </div>
+      </footer>
+
+    </div>
+  </main>
+
+  <!-- Interactive Demo Walkthrough Modal -->
+  <div id="demo-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="glass-card modal-content">
+      <button type="button" class="modal-close-btn" id="close-demo-modal" aria-label="Close demo modal">✕</button>
+      
+      <div class="mono-badge">
+        <span class="badge-dot"></span>
+        <span>cockpit walkthrough</span>
+      </div>
+
+      <h3 id="modal-title" class="modal-title">Live Holographic Cockpit Architecture</h3>
+      <p class="modal-desc">
+        Watch how RailFare AI unifies satellite GPS feeds, station rush densities, and Random Forest pricing in one pane.
+      </p>
+
+      <div class="demo-interactive-preview">
+        <div class="demo-video-placeholder">
+          <div class="demo-cockpit-header">
+            <span>⚡ RAILFARE AI &bull; SATELLITE TELEMETRY DEMO</span>
+            <span class="accent-green">25KV AC ENERGISED</span>
+          </div>
+          <div class="demo-telemetry-screen">
+            <div class="demo-stat-chip">TRAIN #12004 SHATABDI</div>
+            <div class="demo-stat-chip">NDLS &rarr; LKO</div>
+            <div class="demo-stat-chip accent-cyan">SPEED: 118 KM/H</div>
+            <div class="demo-stat-chip accent-red">SURGE: 1.35x ACTIVE</div>
+          </div>
+          <p class="demo-note mono-text">
+            For the live interactive experience with 3D GIS maps and fare forecasting, click below to launch the Streamlit engine:
+          </p>
+          <a href="#" class="cta-launch-app btn-primary-neon" target="_blank" rel="noopener">
+            Open Live Application ↗
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Fixed Bottom Navigation Bar (Mirroring android_ux.py) -->
+  <nav id="mobile-bottom-nav" aria-label="Mobile Bottom Navigation">
+    <a href="#hero" class="mobile-nav-item active">
+      <span class="mob-icon">⚡</span>
+      <span class="mob-lbl">Home</span>
+    </a>
+    <a href="#product" class="mobile-nav-item">
+      <span class="mob-icon">🚀</span>
+      <span class="mob-lbl">Fare AI</span>
+    </a>
+    <a href="#modules" class="mobile-nav-item">
+      <span class="mob-icon">🛰️</span>
+      <span class="mob-lbl">Modules</span>
+    </a>
+    <a href="#" class="cta-launch-app mobile-nav-item mobile-nav-highlight">
+      <span class="mob-icon">🎛️</span>
+      <span class="mob-lbl">Launch</span>
+    </a>
+  </nav>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
+

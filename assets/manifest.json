@@ -1,0 +1,53 @@
+{
+  "name": "RailFare AI – Holographic Cockpit",
+  "short_name": "RailFare AI",
+  "description": "Indian Railways 3D GIS Live Tracker, AI Fare Predictor & Holographic Cockpit",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#050B14",
+  "theme_color": "#00E5FF",
+  "scope": "/",
+  "lang": "en-IN",
+  "categories": ["travel", "utilities", "navigation"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%23050B14'/%3E%3Ccircle cx='96' cy='96' r='70' fill='none' stroke='%2300E5FF' stroke-width='4' opacity='0.6'/%3E%3Ctext x='96' y='108' font-size='72' text-anchor='middle' fill='%2300E5FF'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%23050B14'/%3E%3Ccircle cx='256' cy='256' r='190' fill='none' stroke='%2300E5FF' stroke-width='8' opacity='0.6'/%3E%3Ctext x='256' y='300' font-size='200' text-anchor='middle' fill='%2300E5FF'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live GPS Tracker",
+      "short_name": "GPS Track",
+      "description": "Track any train in real-time with 3D GIS satellite map",
+      "url": "/?screen=tracker",
+      "icons": [{"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Ctext y='80' font-size='80'%3E%F0%9F%9B%B0%EF%B8%8F%3C/text%3E%3C/svg%3E", "sizes": "96x96"}]
+    },
+    {
+      "name": "Fare Predictor",
+      "short_name": "Fare AI",
+      "description": "AI-powered dynamic fare prediction for any route",
+      "url": "/?screen=travel",
+      "icons": [{"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Ctext y='80' font-size='80'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E", "sizes": "96x96"}]
+    },
+    {
+      "name": "PNR Status",
+      "short_name": "PNR",
+      "description": "Check PNR status and live train tracking",
+      "url": "/?screen=pnr",
+      "icons": [{"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Ctext y='80' font-size='80'%3E%F0%9F%8E%AB%3C/text%3E%3C/svg%3E", "sizes": "96x96"}]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
+

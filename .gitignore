@@ -1,0 +1,48 @@
+# ==============================================================================
+# GITIGNORE - INDIAN RAILWAYS FARE PREDICTION & 3D GIS TELEMETRY PLATFORM
+# ==============================================================================
+
+# Virtual Environments (Never commit packages/binaries)
+ir_env/
+.venv/
+.venv-1/
+env/
+venv/
+ENV/
+landing/node_modules/
+landing/dist/
+
+# Secrets & Sensitive API Keys (Never commit private keys)
+.env
+.streamlit/secrets.toml
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Temporary Storage & Local Database
+complaints_db.json
+.streamlit/cache/
+
+# IDE Settings & Backups
+.vscode/
+.idea/
+app_backup_prev.py
+maintenance_archive/
+Microsoft/
+
+# Scratch & Temporary Debug Files
+test*.py
+debug_*.py
+out_*.txt
+grep_fare.txt
+git_log_ct.txt
+test_output.txt
+train_dump.json
+scratch/
+
+# Large Raw Extraction Packs & Backups (Not needed at runtime)
+railradar.pack
+train_info_backup_legacy.csv
