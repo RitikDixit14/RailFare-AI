@@ -1542,7 +1542,7 @@ elif selected_view == "🎛️ AI COCKPIT & OPERATIONS":
         st.markdown("<br>", unsafe_allow_html=True)
         kpi_diag1, kpi_diag2 = st.columns(2)
         traction_load_live = round(min(96.0, max(50.0, 56.0 + running_count * 7.5)), 1)
-        line_voltage_live = round(25.0 + (datetime.now().minute % 5) * 0.08, 1)
+        line_voltage_live = round(25.0 + (datetime.datetime.now().minute % 5) * 0.08, 1)
         with kpi_diag1:
             render_html(uic.kpi_tile("TRACTION LOAD", f"{traction_load_live}%", f"{running_count} ACTIVE LOCOS", status="good", icon="⚡"))
         with kpi_diag2:
